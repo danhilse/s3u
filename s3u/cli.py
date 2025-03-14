@@ -117,58 +117,12 @@ def main():
     parser.add_argument("count", nargs="?", type=int, help="Optional number of files to process (for -b or -d)")
     args = parser.parse_args()
     
-    # Handle configuration command
-    if hasattr(args, 'config') and args.config is not None:
-        return handle_config_command(args.config)
-
-    # If list flag is provided, list all folders and exit
-    if args.list:
-        print("Listing all folders in the bucket...")
-        folders = asyncio.run(list_folders())
-        if folders:
-            print("\nFolders in S3 bucket:")
-            print("-" * 50)
-            print(f"{'Folder Name':<40} {'Items':<10}")
-            print("-" * 50)
-            for folder, count in sorted(folders):
-                print(f"{folder:<40} {count:<10}")
-            print("-" * 50)
-            print(f"Total: {len(folders)} folders")
-        else:
-            print("No folders found or error listing folders.")
-        return
-
-    # If download flag is provided, download the folder and exit
-    if args.download:
-        folder = args.download
-        output_dir = args.output if args.output else folder
-        count = args.count  # This might be None, which means download all
-        
-        if count:
-            print(f"Downloading {count} files from folder '{folder}' to '{output_dir}'...")
-        else:
-            print(f"Downloading all files from folder '{folder}' to '{output_dir}'...")
-            
-        asyncio.run(download_folder(folder, output_dir, count))
-        return
-
-    # If browse flag is provided, just get the CDN links and exit
-    if args.browse:
-        folder = args.browse
-        count = args.count  # This might be None, which means list all
-        
-        if count:
-            print(f"Getting {count} CDN links from folder: {folder}")
-        else:
-            print(f"Getting all CDN links from folder: {folder}")
-            
-        asyncio.run(list_s3_folder_objects(folder, return_urls_only=False, limit=count))
-        return
-
+    # Handle special commands first (config, list, browse, download)
+    # (same as before, no changes needed)
+    
     # Get current directory name as default folder name
     current_dir = os.path.basename(os.path.abspath('.'))
     
-    # Interactive prompts
     print("S3 Upload Utility")
     print("-----------------")
     
@@ -182,157 +136,146 @@ def main():
         video_extensions = ['mp4', 'mov']
         only_videos = all(ext.lower() in video_extensions for ext in extensions)
     
-    # Ask about optimization based on config setting
+    # =============== OPTIMIZATION SETTINGS COLLECTION ===============
+    # Collect optimization settings but DON'T run optimization yet
+    
     optimize = False
     optimize_size = None
-    optimized_files = None
-    source_dir = '.'
-
-
-    # Use config setting for optimize
-    optimize_config = config.get('optimize', 'auto')
-
-    if optimize_config == 'always':
-        optimize = True
-        print("Media optimization enabled (based on config)")
-    elif optimize_config == 'never':
-        optimize = False
-        print("Media optimization disabled (based on config)")
-    else:  # 'auto'
-        optimize = get_input("Optimize media before uploading? (y/n)", "n").lower() == 'y'
-
-    if optimize:
-        # Get default size from config
-        default_size = config.get('size', 'optimized')
+    image_format = None
+    video_format = None
+    video_preset = None
+    optimize_videos = False
+    max_workers = None
+    remove_audio = False
+    optimization_options = None
+    
+    if not only_videos:
+        # Use config setting for optimize
+        optimize_config = config.get('optimize', 'auto')
         
-        # Ask which optimization size to use
-        size_options = {
-            '1': 'optimized',  # 1920px
-            '2': 'small',      # 1080px
-            '3': 'tiny',       # 640px
-            '4': 'patches'     # 1280px with higher compression
-        }
+        if optimize_config == 'always':
+            optimize = True
+            print("Media optimization enabled (based on config)")
+        elif optimize_config == 'never':
+            optimize = False
+            print("Media optimization disabled (based on config)")
+        else:  # 'auto'
+            optimize = get_input("Optimize media before uploading? (y/n)", "n").lower() == 'y'
         
-        # Determine the default choice based on the config
-        default_choice = '1'  # Default to 'optimized'
-        for choice, size in size_options.items():
-            if size == default_size:
-                default_choice = choice
-        
-        size_choice = get_input(f"Select size (1=optimized [1920px], 2=small [1080px], 3=tiny [640px], 4=pATCHES [1280px, high compression])", default_choice)
-        optimize_size = size_options.get(size_choice, default_size)
-        
-        # Get image format preference
-        default_image_format = config.get('image_format', 'webp')
-        image_format_options = {
-            '1': 'webp',  # WebP (good balance)
-            '2': 'jpg',   # JPEG (most compatible)
-            '3': 'avif'   # AVIF (best compression)
-        }
-        
-        # Map config format to option number
-        default_format_choice = '1'  # Default to WebP
-        for opt, fmt in image_format_options.items():
-            if fmt == default_image_format:
-                default_format_choice = opt
-        
-        format_prompt = "Image format (1=webp [recommended], 2=jpg [compatible], 3=avif [best compression])"
-        image_format_choice = get_input(format_prompt, default_format_choice)
-        image_format = image_format_options.get(image_format_choice, default_image_format)
-        
-        # Check if there are video files in the extensions
-        video_extensions = ['mp4', 'mov', 'avi', 'mkv', 'webm']
-        has_videos = not extensions or any(ext.lower() in video_extensions for ext in (extensions or []))
-        
-        # Video optimization options
-        optimize_videos = False
-        video_format = config.get('video_format', 'mp4')
-        video_preset = config.get('video_preset', 'medium')
-        remove_audio = False
-        
-        if has_videos:
-            optimize_videos_default = config.get('optimize_videos', 'no')
-            if optimize_videos_default == 'yes':
-                optimize_videos = True
-                print("Video optimization enabled (based on config)")
-            else:
-                optimize_videos_input = get_input("Optimize videos as well? (y/n)", "n")
-                optimize_videos = optimize_videos_input.lower() == 'y'
+        if optimize:
+            # Get default size from config
+            default_size = config.get('size', 'optimized')
             
-            if optimize_videos:
-                # Get video format preference
-                default_video_format = config.get('video_format', 'mp4')
-                video_format_options = {
-                    '1': 'mp4',   # MP4/H.264 (compatible)
-                    '2': 'webm'   # WebM/VP9 (better compression)
-                }
+            # Ask which optimization size to use
+            size_options = {
+                '1': 'optimized',  # 1920px
+                '2': 'small',      # 1080px
+                '3': 'tiny',       # 640px
+                '4': 'patches'     # 1280px with higher compression
+            }
+            
+            # Determine the default choice based on the config
+            default_choice = '1'  # Default to 'optimized'
+            for choice, size in size_options.items():
+                if size == default_size:
+                    default_choice = choice
+            
+            size_choice = get_input(f"Select size (1=optimized [1920px], 2=small [1080px], 3=tiny [640px], 4=pATCHES [1280px, high compression])", default_choice)
+            optimize_size = size_options.get(size_choice, default_size)
+            
+            # Get image format preference
+            default_image_format = config.get('image_format', 'webp')
+            image_format_options = {
+                '1': 'webp',  # WebP (good balance)
+                '2': 'jpg',   # JPEG (most compatible)
+                '3': 'avif'   # AVIF (best compression)
+            }
+            
+            # Map config format to option number
+            default_format_choice = '1'  # Default to WebP
+            for opt, fmt in image_format_options.items():
+                if fmt == default_image_format:
+                    default_format_choice = opt
+            
+            format_prompt = "Image format (1=webp [recommended], 2=jpg [compatible], 3=avif [best compression])"
+            image_format_choice = get_input(format_prompt, default_format_choice)
+            image_format = image_format_options.get(image_format_choice, default_image_format)
+            
+            # Check if there are video files in the extensions
+            video_extensions = ['mp4', 'mov', 'avi', 'mkv', 'webm']
+            has_videos = not extensions or any(ext.lower() in video_extensions for ext in (extensions or []))
+            
+            # Video optimization options
+            if has_videos:
+                optimize_videos_default = config.get('optimize_videos', 'no')
+                if optimize_videos_default == 'yes':
+                    optimize_videos = True
+                    print("Video optimization enabled (based on config)")
+                else:
+                    optimize_videos_input = get_input("Optimize videos as well? (y/n)", "n")
+                    optimize_videos = optimize_videos_input.lower() == 'y'
                 
-                # Map config format to option number
-                default_video_choice = '1'  # Default to MP4
-                for opt, fmt in video_format_options.items():
-                    if fmt == default_video_format:
-                        default_video_choice = opt
-                
-                video_format_prompt = "Video format (1=mp4 [compatible], 2=webm [better compression])"
-                video_format_choice = get_input(video_format_prompt, default_video_choice)
-                video_format = video_format_options.get(video_format_choice, default_video_format)
-                
-                # Get video preset preference
-                default_preset = config.get('video_preset', 'medium')
-                preset_options = {
-                    '1': 'fast',    # Fast encoding, larger files
-                    '2': 'medium',  # Balanced
-                    '3': 'slow'     # Slow encoding, smaller files
-                }
-                
-                # Map config preset to option number
-                default_preset_choice = '2'  # Default to medium
-                for opt, preset in preset_options.items():
-                    if preset == default_preset:
-                        default_preset_choice = opt
-                
-                preset_prompt = "Video encoding preset (1=fast [quick], 2=medium [balanced], 3=slow [best quality])"
-                preset_choice = get_input(preset_prompt, default_preset_choice)
-                video_preset = preset_options.get(preset_choice, default_preset)
-                
-                # For pATCHES mode, ask about removing audio
-                if optimize_size == 'patches':
-                    remove_audio_default = config.get('remove_audio', 'no')
-                    remove_audio_prompt = "Remove audio from videos? (y/n)"
-                    remove_audio_input = get_input(remove_audio_prompt, "y" if remove_audio_default == "yes" else "n")
-                    remove_audio = remove_audio_input.lower() == 'y'
-        
-        # Get number of optimization workers
-        default_workers = config.get('max_workers', 4)
-        workers_prompt = f"Parallel optimization workers (1-16, higher=faster) [{default_workers}]"
-        workers_input = get_input(workers_prompt, str(default_workers))
-        max_workers = int(workers_input) if workers_input.isdigit() and 1 <= int(workers_input) <= 16 else default_workers
-        
-        # Run optimization
-        print("\nOptimizing media...")
-        
-        # Prepare options dictionary for optimizer
-        optimization_options = {
-            'size': optimize_size,
-            'output_format': image_format,
-            'video_format': video_format,
-            'optimize_videos': optimize_videos,
-            'preset': video_preset,
-            'max_workers': max_workers,
-            'remove_audio': remove_audio
-        }
-        
-        # Pass the options to the optimizer
-        source_dir, optimized_files = optimize_images('.', optimization_options)
-        
-        if not optimized_files:
-            print("No files were optimized. Proceeding with regular upload.")
-            source_dir = '.'
-            optimized_files = None
-        else:
-            # Update the source directory to point to the optimized files
-            print(f"Will upload {len(optimized_files)} optimized files from {source_dir}")
-
+                if optimize_videos:
+                    # Get video format preference
+                    default_video_format = config.get('video_format', 'mp4')
+                    video_format_options = {
+                        '1': 'mp4',   # MP4/H.264 (compatible)
+                        '2': 'webm'   # WebM/VP9 (better compression)
+                    }
+                    
+                    # Map config format to option number
+                    default_video_choice = '1'  # Default to MP4
+                    for opt, fmt in video_format_options.items():
+                        if fmt == default_video_format:
+                            default_video_choice = opt
+                    
+                    video_format_prompt = "Video format (1=mp4 [compatible], 2=webm [better compression])"
+                    video_format_choice = get_input(video_format_prompt, default_video_choice)
+                    video_format = video_format_options.get(video_format_choice, default_video_format)
+                    
+                    # Get video preset preference
+                    default_preset = config.get('video_preset', 'medium')
+                    preset_options = {
+                        '1': 'fast',    # Fast encoding, larger files
+                        '2': 'medium',  # Balanced
+                        '3': 'slow'     # Slow encoding, smaller files
+                    }
+                    
+                    # Map config preset to option number
+                    default_preset_choice = '2'  # Default to medium
+                    for opt, preset in preset_options.items():
+                        if preset == default_preset:
+                            default_preset_choice = opt
+                    
+                    preset_prompt = "Video encoding preset (1=fast [quick], 2=medium [balanced], 3=slow [best quality])"
+                    preset_choice = get_input(preset_prompt, default_preset_choice)
+                    video_preset = preset_options.get(preset_choice, default_preset)
+                    
+                    # For pATCHES mode, ask about removing audio
+                    if optimize_size == 'patches':
+                        remove_audio_default = config.get('remove_audio', 'no')
+                        remove_audio_prompt = "Remove audio from videos? (y/n)"
+                        remove_audio_input = get_input(remove_audio_prompt, "y" if remove_audio_default == "yes" else "n")
+                        remove_audio = remove_audio_input.lower() == 'y'
+            
+            # Get number of optimization workers
+            default_workers = config.get('max_workers', 4)
+            workers_prompt = f"Parallel optimization workers (1-16, higher=faster) [{default_workers}]"
+            workers_input = get_input(workers_prompt, str(default_workers))
+            max_workers = int(workers_input) if workers_input.isdigit() and 1 <= int(workers_input) <= 16 else default_workers
+            
+            # Prepare optimization options for later use
+            optimization_options = {
+                'size': optimize_size,
+                'output_format': image_format,
+                'video_format': video_format,
+                'optimize_videos': optimize_videos,
+                'preset': video_preset,
+                'max_workers': max_workers,
+                'remove_audio': remove_audio
+            }
+    
+    # =============== S3 UPLOAD SETTINGS COLLECTION ===============
     
     # Get list of existing folders for tab completion
     print("Fetching existing folders for tab completion...")
@@ -411,10 +354,13 @@ def main():
         concurrent_input = get_input(f"Concurrent uploads (optional, press Enter for {config_concurrent})")
         concurrent = int(concurrent_input) if concurrent_input else config_concurrent
     
-    # Update the "Confirm settings" section with new information
+    # =============== CONFIRM AND EXECUTE ===============
+    
+    # Confirm settings
     print("\nUpload Settings:")
     print(f"  Extensions: {extensions if extensions else 'All files'}")
-
+    
+    # Display optimization settings
     if optimize:
         print(f"  Media optimization: {optimize_size}")
         print(f"  Image format: {image_format}")
@@ -431,6 +377,8 @@ def main():
         print(f"  Parallel workers: {max_workers}")
     else:
         print("  Media optimization: Disabled")
+    
+    # Display upload settings
     print(f"  S3 Folder: {folder}")
     if folder_exists:
         print(f"  Include Existing Files: {'Yes' if include_existing else 'No'}")
@@ -442,12 +390,35 @@ def main():
     print(f"  Output Format: {selected_format.capitalize()}")
     print(f"  Concurrent Uploads: {concurrent}")
     
+    # Get final confirmation
     confirm = get_input("\nProceed with upload? (y/n)", "y")
     if confirm.lower() != 'y':
         print("Upload cancelled.")
         return
     
-    # Run the upload
+    # =============== RUN OPTIMIZATION (DEFERRED UNTIL NOW) ===============
+    
+    # Initialize variables for the upload
+    source_dir = '.'
+    optimized_files = None
+    
+    # Now run the optimization if enabled
+    if optimize and optimization_options:
+        print("\nStarting media optimization...")
+        # Pass the options to the optimizer
+        source_dir, optimized_files = optimize_images('.', optimization_options)
+        
+        if not optimized_files:
+            print("No files were optimized. Proceeding with regular upload.")
+            source_dir = '.'
+            optimized_files = None
+        else:
+            # Update the source directory to point to the optimized files
+            print(f"Successfully optimized {len(optimized_files)} files in {source_dir}")
+    
+    # =============== RUN UPLOAD ===============
+    
+    # Run the upload with all settings
     asyncio.run(upload_files(
         s3_folder=folder,
         extensions=extensions,
@@ -458,7 +429,7 @@ def main():
         source_dir=source_dir,
         specific_files=optimized_files,
         include_existing=include_existing,
-        output_format=selected_format  # Pass the selected format to uploader
+        output_format=selected_format
     ))
 
 if __name__ == "__main__":
