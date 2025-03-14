@@ -115,7 +115,13 @@ def main():
     parser.add_argument("-ls", "--list", action="store_true", help="List all folders in the bucket with item count")
     parser.add_argument("-config", nargs="*", metavar="OPTION [VALUE]", help="Configure persistent settings (use without args to show all options)")
     parser.add_argument("count", nargs="?", type=int, help="Optional number of files to process (for -b or -d)")
+    parser.add_argument("-f", "--first", action="store_true", help="Copy only the first URL to clipboard")
     args = parser.parse_args()
+    
+    
+    if args.first:
+        only_first = True
+
     
     # Handle special commands first (config, list, browse, download)
     # (same as before, no changes needed)
@@ -260,7 +266,7 @@ def main():
             
             # Get number of optimization workers
             default_workers = config.get('max_workers', 4)
-            workers_prompt = f"Parallel optimization workers (1-16, higher=faster) [{default_workers}]"
+            workers_prompt = f"Parallel optimization workers (1-16, higher=faster)"
             workers_input = get_input(workers_prompt, str(default_workers))
             max_workers = int(workers_input) if workers_input.isdigit() and 1 <= int(workers_input) <= 16 else default_workers
             
@@ -277,74 +283,46 @@ def main():
     
     # =============== S3 UPLOAD SETTINGS COLLECTION ===============
     
-    # Get list of existing folders for tab completion
-    print("Fetching existing folders for tab completion...")
-    folder_tuples = asyncio.run(list_folders())
-    existing_folders = [folder for folder, _ in folder_tuples]
-    print(f"Found {len(existing_folders)} folders")
-    
-    # Get S3 folder with tab completion
+    # Get S3 folder with tab completion - only fetch folders when needed
     print("Enter folder name (press Tab to see existing folders)")
-    folder = get_input_with_completion("S3 folder name", current_dir, existing_folders)
+    
+    # Get the folder name first, without completion
+    folder = get_input("S3 folder name", current_dir)
+    
+    # If the user pressed tab or seems to be looking for completion, then fetch folders
+    if not folder or folder == current_dir:
+        print("Fetching existing folders for tab completion...")
+        folder_tuples = asyncio.run(list_folders())
+        existing_folders = [folder for folder, _ in folder_tuples]
+        print(f"Found {len(existing_folders)} folders")
+        
+        # Now get the folder with completion
+        folder = get_input_with_completion("S3 folder name", folder, existing_folders)
     
     # Check if folder exists in S3
     folder_exists = asyncio.run(check_folder_exists(folder))
     
-    # Initialize include_existing with default value
-    include_existing = True
+    # Initialize include_existing with default value - changed to 'n'
+    include_existing = False
     
     if folder_exists:
         print(f"\nFolder '{folder}' already exists in S3 bucket.")
-        include_existing_input = get_input("Include existing files in CDN links? (y/n)", "y")
+        include_existing_input = get_input("Include existing files in CDN links? (y/n)", "n")
         include_existing = include_existing_input.lower() == 'y'
     
     # Get rename prefix
     rename_prefix = get_input("Rename prefix (optional, press Enter to skip)")
     
-    # Get rename mode if a prefix is specified
-    rename_mode = config.get('rename_mode', 'replace')  # Get default from config
-    
-    if rename_prefix:
-        mode_options = {
-            '1': 'replace',  # Replace filename with prefix_index
-            '2': 'prepend',  # Prepend the prefix to filename (prefix_filename)
-            '3': 'append',   # Append the prefix to filename (filename_prefix)
-        }
-        
-        # Find default option based on config
-        default_option = '1'  # Default to replace
-        for opt, mode in mode_options.items():
-            if mode == rename_mode:
-                default_option = opt
-                
-        mode_prompt = "Rename mode (1=replace [prefix_index], 2=prepend [prefix_filename], 3=append [filename_prefix])"
-        mode_choice = get_input(mode_prompt, default_option)
-        selected_mode = mode_options.get(mode_choice, rename_mode)
-    else:
-        selected_mode = rename_mode  # Use config default, but it won't be used anyway
+    # Get rename mode from config if a prefix is specified
+    # Don't ask the user directly, use the config setting
+    rename_mode = config.get('rename_mode', 'replace')
     
     # Get output format from config
-    default_format = config.get('format', 'array')
-    format_options = {
-        '1': 'array',  # Default JSON array
-        '2': 'json',   # JSON object with additional metadata
-        '3': 'xml',    # XML format
-        '4': 'html',   # HTML links
-        '5': 'csv'     # CSV format
-    }
-    
-    # Map config format to option number
-    default_option = '1'  # Default to array
-    for opt, fmt in format_options.items():
-        if fmt == default_format:
-            default_option = opt
-    
-    format_prompt = "Output format (1=array, 2=json, 3=xml, 4=html, 5=csv)"
-    output_format = get_input(format_prompt, default_option)
+    # Don't ask the user directly, use the config setting
+    selected_format = config.get('format', 'array')
     
     # Determine if we should only return the first URL based on the format
-    selected_format = format_options.get(output_format, 'array')
-    only_first = (output_format == "1" and default_format == "array")  # Legacy behavior
+    only_first = False 
     
     # Get concurrency from config or command line
     concurrent = args.concurrent
@@ -384,10 +362,10 @@ def main():
         print(f"  Include Existing Files: {'Yes' if include_existing else 'No'}")
     if rename_prefix:
         print(f"  Rename Prefix: {rename_prefix}")
-        print(f"  Rename Mode: {selected_mode}")
+        print(f"  Rename Mode: {rename_mode} (from config)")
     else:
         print("  No renaming")
-    print(f"  Output Format: {selected_format.capitalize()}")
+    print(f"  Output Format: {selected_format.capitalize()} (from config)")
     print(f"  Concurrent Uploads: {concurrent}")
     
     # Get final confirmation
@@ -423,7 +401,7 @@ def main():
         s3_folder=folder,
         extensions=extensions,
         rename_prefix=rename_prefix,
-        rename_mode=selected_mode,
+        rename_mode=rename_mode,
         only_first=only_first,
         max_concurrent=concurrent,
         source_dir=source_dir,

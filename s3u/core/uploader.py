@@ -51,6 +51,150 @@ def should_process_file(filename, extensions):
     
     return False
 
+async def upload_file(session, file_path, s3_folder):
+    """
+    Upload a single file to S3.
+    
+    Args:
+        session (aioboto3.Session): aioboto3 session
+        file_path (str): Path to the file to upload
+        s3_folder (str): Destination folder in S3
+        
+    Returns:
+        tuple: (success, data) where data contains URL and metadata if successful
+    """
+    try:
+        # Get file properties
+        file_name = os.path.basename(file_path)
+        file_size = os.path.getsize(file_path)
+        file_type = get_mime_type(file_path)
+        
+        # Generate S3 key with folder prefix
+        s3_key = f"{s3_folder}/{file_name}" if s3_folder else file_name
+        
+        # Get file timestamp
+        timestamp = datetime.fromtimestamp(os.path.getmtime(file_path))
+        
+        # Prepare progress callback
+        file_progress = {
+            'uploaded': 0,
+            'total': file_size,
+            'start_time': None
+        }
+        
+        def progress_callback(bytes_transferred):
+            if file_progress['start_time'] is None:
+                file_progress['start_time'] = datetime.now()
+            
+            file_progress['uploaded'] = bytes_transferred
+            percent = (bytes_transferred / file_size) * 100
+            
+            # Calculate ETA
+            if bytes_transferred > 0:
+                elapsed_time = (datetime.now() - file_progress['start_time']).total_seconds()
+                upload_speed = bytes_transferred / elapsed_time if elapsed_time > 0 else 0
+                remaining_bytes = file_size - bytes_transferred
+                eta_seconds = remaining_bytes / upload_speed if upload_speed > 0 else 0
+                
+                # Format ETA
+                eta = ""
+                if eta_seconds < 60:
+                    eta = f"{eta_seconds:.0f}s"
+                else:
+                    eta = f"{eta_seconds/60:.1f}m"
+                
+                # Format speed
+                speed = ""
+                if upload_speed < 1024:
+                    speed = f"{upload_speed:.2f} B/s"
+                elif upload_speed < 1024 * 1024:
+                    speed = f"{upload_speed/1024:.2f} KB/s"
+                else:
+                    speed = f"{upload_speed/(1024*1024):.2f} MB/s"
+                
+                sys.stdout.write(f"\rUploading {file_name}: {percent:.1f}% | {speed} | ETA: {eta}")
+            else:
+                sys.stdout.write(f"\rUploading {file_name}: {percent:.1f}%")
+            
+            sys.stdout.flush()
+        
+        # Use the async context manager to get the client
+        async with session.client('s3') as s3:
+            # Perform the upload with progress callback, without ACL setting
+            with open(file_path, 'rb') as f:
+                await s3.upload_fileobj(
+                    f, 
+                    BUCKET_NAME, 
+                    s3_key,
+                    Callback=progress_callback,
+                    ExtraArgs={
+                        'ContentType': file_type
+                        # Removed 'ACL': 'public-read' to work with limited permissions
+                    }
+                )
+        
+        # Print newline after progress
+        print()
+        
+        # Generate CloudFront URL for the file
+        cloudfront_url = f"{CLOUDFRONT_URL}/{s3_key}"
+        
+        # Return success with URL and metadata
+        return True, {
+            'url': cloudfront_url,
+            'key': s3_key,
+            'size': file_size,
+            'type': file_type,
+            'timestamp': timestamp.isoformat(),
+            'bucket': BUCKET_NAME
+        }
+    
+    except FileNotFoundError:
+        print(f"Error: File not found: {file_path}")
+        return False, None
+    except NoCredentialsError:
+        print("Error: AWS credentials not found")
+        return False, None
+    except Exception as e:
+        print(f"Error uploading {file_path}: {str(e)}")
+        return False, None
+    
+def get_mime_type(file_path):
+    """
+    Get the MIME type of a file based on its extension.
+    
+    Args:
+        file_path (str): Path to the file
+        
+    Returns:
+        str: MIME type string
+    """
+    # Map of common extensions to MIME types
+    extension_map = {
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp',
+        '.avif': 'image/avif',
+        '.mp4': 'video/mp4',
+        '.mov': 'video/quicktime',
+        '.webm': 'video/webm',
+        '.txt': 'text/plain',
+        '.html': 'text/html',
+        '.css': 'text/css',
+        '.js': 'application/javascript',
+        '.json': 'application/json',
+        '.pdf': 'application/pdf',
+        '.zip': 'application/zip'
+    }
+    
+    # Get the file extension
+    _, ext = os.path.splitext(file_path.lower())
+    
+    # Return the mapped MIME type or a default
+    return extension_map.get(ext, 'application/octet-stream')
+
 def rename_files(directory, extensions, rename_prefix=None, rename_mode='replace', specific_files=None):
     """
     Rename files with a common prefix and sequential numbering.
@@ -203,106 +347,6 @@ async def upload_files(s3_folder, extensions=None, rename_prefix=None, rename_mo
             all_objects = []  # We don't need objects for array format
         else:
             existing_objects = await list_s3_folder_objects(s3_folder, return_urls_only=False, output_format='json')
-            
-            # Create a set of uploaded URLs for faster lookup
-            uploaded_url_set = set(uploaded_urls)
-            
-            # Filter existing objects to avoid duplicates
-            filtered_existing = [obj for obj in existing_objects if obj['url'] not in uploaded_url_set]
-            
-            # Merge the lists
-            all_objects = uploaded_objects + filtered_existing
-            all_urls = [obj['url'] for obj in all_objects]
-            
-            print(f"Total of {len(all_urls)} files in folder (new + existing)")
-    else:
-        all_urls = uploaded_urls
-        all_objects = uploaded_objects
-        print(f"Including only newly uploaded files ({len(all_urls)})")
-    
-    # Copy to clipboard
-    if all_urls:
-        if only_first and output_format == 'array':
-            pyperclip.copy(all_urls[0])
-            print(f"\nCopied first URL to clipboard: {all_urls[0]}")
-        else:
-            clipboard_content = format_output(all_urls, all_objects, output_format)
-            pyperclip.copy(clipboard_content)
-            print(f"\nCopied {output_format} format data to clipboard")
-    
-    return all_urls
-
-async def upload_files(s3_folder, extensions=None, rename_prefix=None, only_first=False, 
-                       max_concurrent=10, source_dir='.', specific_files=None, 
-                       include_existing=True, output_format='array'):
-    """
-    Upload files from the specified directory to S3.
-    
-    Args:
-        s3_folder (str): The folder name in the S3 bucket to upload to
-        extensions (list): File extensions to include (e.g., ['jpg', 'png'])
-        rename_prefix (str): Prefix for renaming files before upload
-        only_first (bool): Only copy the first URL to clipboard
-        max_concurrent (int): Maximum concurrent uploads
-        source_dir (str): Directory containing files to upload
-        specific_files (list): Optional list of specific files to upload
-        include_existing (bool): Whether to include existing files in the CDN links
-        output_format (str): Format for output: 'array', 'json', 'xml', 'html', or 'csv'
-    
-    Returns:
-        list: List of CloudFront URLs for uploaded files
-    """
-    session = get_s3_session()
-    
-    # Ensure S3 folder exists
-    await ensure_s3_folder_exists(session, s3_folder)
-    
-    # Rename files
-    renamed_files, original_to_new = rename_files(source_dir, extensions, rename_prefix, specific_files)
-    
-    if not renamed_files:
-        print("No files to upload.")
-        return []
-    
-    # Create a semaphore to limit concurrent uploads
-    semaphore = asyncio.Semaphore(max_concurrent)
-    
-    async def upload_with_semaphore(file):
-        async with semaphore:
-            return await upload_file(session, file, s3_folder)
-    
-    # Create tasks for all file uploads
-    tasks = [upload_with_semaphore(file) for file in renamed_files]
-    
-    # Progress tracking
-    total_files = len(tasks)
-    print(f"Starting upload of {total_files} files...")
-    
-    # Wait for all uploads to complete
-    results = await asyncio.gather(*tasks)
-    
-    # Extract successful upload URLs and metadata
-    uploaded_urls = []
-    uploaded_objects = []
-    
-    for success, data in results:
-        if success and data:
-            uploaded_urls.append(data['url'])
-            uploaded_objects.append(data)
-    
-    print(f"\nCompleted {len(uploaded_urls)} of {total_files} uploads")
-    
-    # Get existing files if needed
-    if include_existing:
-        print("Including existing files in the CDN links...")
-        if output_format == 'array':
-            existing_urls = await list_s3_folder_objects(s3_folder, return_urls_only=True)
-            # Merge the lists, ensuring no duplicates by converting to a set first
-            all_urls = list(set(uploaded_urls + existing_urls))
-            print(f"Total of {len(all_urls)} files in folder (new + existing)")
-            all_objects = []  # We don't need objects for array format
-        else:
-            existing_objects = await list_s3_folder_objects(s3_folder, return_urls_only=True, output_format='json')
             
             # Create a set of uploaded URLs for faster lookup
             uploaded_url_set = set(uploaded_urls)
