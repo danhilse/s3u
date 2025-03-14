@@ -5,14 +5,21 @@ import sys
 import argparse
 import asyncio
 import readline
-from .uploader import (
+
+# Import functions from core modules
+from .core import (
     upload_files, 
     list_s3_folder_objects, 
     check_folder_exists, 
     download_folder,
     list_folders
 )
+
+# Import optimizer
 from .optimizer import process_directory as optimize_images
+
+# Import config functions
+from .config import load_config, handle_config_command
 
 def setup_folder_completion(folders):
     """
@@ -96,6 +103,9 @@ def parse_extensions(extensions_input):
         return [ext.strip() for ext in extensions_input.split() if ext.strip()]
 
 def main():
+    # Load configuration
+    config = load_config()
+    
     # Create argument parser for optional command line arguments
     parser = argparse.ArgumentParser(description="Upload files to S3 bucket with optional renaming.")
     parser.add_argument("-c", "--concurrent", type=int, help="Maximum concurrent uploads")
@@ -103,8 +113,13 @@ def main():
     parser.add_argument("-d", "--download", metavar="FOLDER", help="Download all files from a folder in the bucket")
     parser.add_argument("-o", "--output", metavar="DIR", help="Output directory for downloads (used with -d)")
     parser.add_argument("-ls", "--list", action="store_true", help="List all folders in the bucket with item count")
+    parser.add_argument("-config", nargs="*", metavar="OPTION [VALUE]", help="Configure persistent settings (use without args to show all options)")
     parser.add_argument("count", nargs="?", type=int, help="Optional number of files to process (for -b or -d)")
     args = parser.parse_args()
+    
+    # Handle configuration command
+    if hasattr(args, 'config') and args.config is not None:
+        return handle_config_command(args.config)
 
     # If list flag is provided, list all folders and exit
     if args.list:
@@ -167,24 +182,44 @@ def main():
         video_extensions = ['mp4', 'mov']
         only_videos = all(ext.lower() in video_extensions for ext in extensions)
     
-    # Ask about optimization if not only videos
+    # Ask about optimization based on config setting
     optimize = False
     optimize_size = None
     optimized_files = None
     source_dir = '.'
     
     if not only_videos:
-        optimize = get_input("Optimize images before uploading? (y/n)", "n").lower() == 'y'
+        # Use config setting for optimize
+        optimize_config = config.get('optimize', 'auto')
+        
+        if optimize_config == 'always':
+            optimize = True
+            print("Image optimization enabled (based on config)")
+        elif optimize_config == 'never':
+            optimize = False
+            print("Image optimization disabled (based on config)")
+        else:  # 'auto'
+            optimize = get_input("Optimize images before uploading? (y/n)", "n").lower() == 'y'
         
         if optimize:
+            # Get default size from config
+            default_size = config.get('size', 'optimized')
+            
             # Ask which optimization size to use
             size_options = {
                 '1': 'optimized',  # 1920px
                 '2': 'small',      # 1080px
                 '3': 'tiny'        # 640px
             }
-            size_choice = get_input("Select size (1=optimized [1920px], 2=small [1080px], 3=tiny [640px])", "1")
-            optimize_size = size_options.get(size_choice, 'optimized')
+            
+            # Determine the default choice based on the config
+            default_choice = '1'  # Default to 'optimized'
+            for choice, size in size_options.items():
+                if size == default_size:
+                    default_choice = choice
+            
+            size_choice = get_input(f"Select size (1=optimized [1920px], 2=small [1080px], 3=tiny [640px])", default_choice)
+            optimize_size = size_options.get(size_choice, default_size)
             
             # Run optimization
             print("\nOptimizing images...")
@@ -222,15 +257,36 @@ def main():
     # Get rename prefix
     rename_prefix = get_input("Rename prefix (optional, press Enter to skip)")
     
-    # Get output format
-    output_format = get_input("Output format (1=array [default], 2=single URL)", "1")
-    only_first = (output_format == "2")
+    # Get output format from config
+    default_format = config.get('format', 'array')
+    format_options = {
+        '1': 'array',  # Default JSON array
+        '2': 'json',   # JSON object with additional metadata
+        '3': 'xml',    # XML format
+        '4': 'html',   # HTML links
+        '5': 'csv'     # CSV format
+    }
     
-    # Get concurrency
+    # Map config format to option number
+    default_option = '1'  # Default to array
+    for opt, fmt in format_options.items():
+        if fmt == default_format:
+            default_option = opt
+    
+    format_prompt = "Output format (1=array, 2=json, 3=xml, 4=html, 5=csv)"
+    output_format = get_input(format_prompt, default_option)
+    
+    # Determine if we should only return the first URL based on the format
+    selected_format = format_options.get(output_format, 'array')
+    only_first = (output_format == "1" and default_format == "array")  # Legacy behavior
+    
+    # Get concurrency from config or command line
     concurrent = args.concurrent
     if not concurrent:
-        concurrent_input = get_input("Concurrent uploads (optional, press Enter for sequential)")
-        concurrent = int(concurrent_input) if concurrent_input else 1
+        # Use config value as default
+        config_concurrent = config.get('concurrent', 5)
+        concurrent_input = get_input(f"Concurrent uploads (optional, press Enter for {config_concurrent})")
+        concurrent = int(concurrent_input) if concurrent_input else config_concurrent
     
     # Confirm settings
     print("\nUpload Settings:")
@@ -243,7 +299,7 @@ def main():
     if folder_exists:
         print(f"  Include Existing Files: {'Yes' if include_existing else 'No'}")
     print(f"  Rename Prefix: {rename_prefix if rename_prefix else 'No renaming'}")
-    print(f"  Output Format: {'Single URL' if only_first else 'Array of URLs'}")
+    print(f"  Output Format: {selected_format.capitalize()}")
     print(f"  Concurrent Uploads: {concurrent}")
     
     confirm = get_input("\nProceed with upload? (y/n)", "y")
@@ -260,7 +316,8 @@ def main():
         max_concurrent=concurrent,
         source_dir=source_dir,
         specific_files=optimized_files,
-        include_existing=include_existing
+        include_existing=include_existing,
+        output_format=selected_format  # Pass the selected format to uploader
     ))
 
 if __name__ == "__main__":

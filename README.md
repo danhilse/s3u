@@ -18,6 +18,8 @@ An interactive command-line tool for optimizing images, uploading files (includi
 - List all folders with item counts
 - Smart handling of existing folders
 - Limit file counts for downloads and browsing
+- Persistent configuration system with arrow key selection
+- Multiple output formats (JSON, XML, HTML, CSV)
 
 ## Requirements
 
@@ -76,6 +78,61 @@ s3u -d mj_watercolors -o ./downloaded_images
 s3u -d mj_watercolors 10 -o ./downloaded_images
 ```
 
+### Configuration System
+
+s3u includes a persistent configuration system that allows you to set default values for various options.
+
+```bash
+# Show current configuration
+s3u -config
+
+# Configure a specific option interactively using arrow keys
+s3u -config format
+
+# Set a specific option directly
+s3u -config format json
+
+# Show all configuration values
+s3u -config show
+```
+
+#### Interactive Configuration
+
+When configuring options interactively, you can use arrow keys to select from available options:
+
+```
+Configuring: format
+Description: Output format for generated URLs
+Current value: array
+Use arrow keys to select an option, Enter to confirm:
+❯ array
+  json
+  xml
+  html
+  csv
+```
+
+Simply navigate to your preferred option using arrow keys and press Enter to select it.
+
+#### Available Configuration Options
+
+| Option | Description | Allowed Values | Default |
+|--------|-------------|----------------|---------|
+| format | Output format for generated URLs | array, json, xml, html, csv | array |
+| concurrent | Default number of concurrent uploads | 1-20 | 5 |
+| optimize | Default image optimization setting | auto, always, never | auto |
+| size | Default optimization size | optimized, small, tiny | optimized |
+
+#### Output Formats
+
+The configuration system introduces multiple output formats for the URLs and metadata:
+
+- **array**: Simple JSON array of URLs (default)
+- **json**: JSON object with metadata including file size, type, and timestamps
+- **xml**: XML document with file metadata
+- **html**: HTML document with clickable links
+- **csv**: CSV file format with URL and metadata columns
+
 ### Interactive Options
 
 1. **File extensions** - Specify which file types to include (e.g., "jpg png mp4 mov" or "jpg,png,mp4,mov")
@@ -84,7 +141,7 @@ s3u -d mj_watercolors 10 -o ./downloaded_images
 4. **S3 folder** - Specify the destination folder in your S3 bucket (press Tab for autocompletion)
 5. **Existing folder handling** - Choose whether to include existing files in CDN links (if folder exists)
 6. **Rename prefix** - Optionally rename files with a common prefix
-7. **Output format** - Choose between JSON array or single URL for clipboard
+7. **Output format** - Choose between output formats for clipboard
 8. **Concurrency** - Optionally enable concurrent uploads for speed
 
 ## Folder Management
@@ -119,7 +176,7 @@ When downloading a folder:
 ### Browsing Folders
 
 When browsing a folder:
-- All CloudFront URLs are copied to the clipboard as a JSON array
+- All CloudFront URLs are copied to the clipboard in the configured format
 - Optionally limit the number of URLs with `s3u -b folder_name 12`
 
 ### Listing Folders
@@ -138,6 +195,20 @@ watercolors                              37
 Total: 3 folders
 ```
 
+## Configuration File
+
+The configuration is stored in a JSON file at `~/.s3u/config.json`. You can edit this file directly if needed, but it's recommended to use the `-config` command to ensure proper validation.
+
+Example configuration file:
+```json
+{
+    "format": "json",
+    "concurrent": 10,
+    "optimize": "auto",
+    "size": "optimized"
+}
+```
+
 ## Notes
 
 - The tool uses AWS credentials from your environment
@@ -148,3 +219,5 @@ Total: 3 folders
 - Downloads and folder listings use the same AWS credentials and bucket settings
 - When limiting file counts, files are processed in alphabetical order
 - Tab completion requires the readline module, which is standard in most Python installations
+- Configuration settings are stored in the user's home directory and persist between sessions
+- Arrow key selection for configuration requires the questionary package (included in dependencies)
