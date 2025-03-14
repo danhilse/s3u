@@ -159,7 +159,7 @@ def get_image_size(input_path):
         print(e.stderr)
         return None, None
 
-def transcode_video(input_path, output_path, max_width, preset, video_format='mp4', bitrate=None):
+def transcode_video(input_path, output_path, max_width, preset, video_format='mp4', bitrate=None, patches_mode=False, remove_audio=False):
     """
     Transcode a video to a web-optimized format.
     
@@ -170,6 +170,8 @@ def transcode_video(input_path, output_path, max_width, preset, video_format='mp
         preset (str): Encoding preset ('fast', 'medium', 'slow')
         video_format (str): Output format ('mp4', 'webm')
         bitrate (str): Optional custom bitrate (e.g., '2M', '5M')
+        patches_mode (bool): Whether to use the pATCHES optimization mode
+        remove_audio (bool): Whether to remove audio from the video
         
     Returns:
         bool: True if successful, False otherwise
@@ -181,15 +183,46 @@ def transcode_video(input_path, output_path, max_width, preset, video_format='mp
 
     width, height = info['width'], info['height']
     
-    # Determine the scale filter
-    scale_filter = f'scale={max_width}:-1'
+    # For pATCHES mode, use the specific scaling logic
+    if patches_mode:
+        # Scale to specified width while maintaining aspect ratio
+        scale_filter = f"scale='min({max_width},iw)':-2"
+    else:
+        # Standard scaling logic
+        if width <= max_width:
+            scale_filter = f'scale={width}:-1'
+        else:
+            scale_filter = f'scale={max_width}:-1'
     
-    # If the original width is smaller than max_width, keep original size
-    if width <= max_width:
-        scale_filter = f'scale={width}:-1'
-    
-    # Set format-specific parameters
-    if video_format == 'webm':
+    # pATCHES optimization mode (higher compression settings)
+    if patches_mode:
+        # Always use MP4 with H.264 for pATCHES mode
+        cmd = [
+            'ffmpeg',
+            '-i', input_path,
+            '-vf', scale_filter,
+            '-c:v', 'libx264',
+            '-crf', '28',           # Higher compression quality (higher CRF = more compression)
+            '-preset', 'slow',      # Slow preset for better compression
+        ]
+        
+        # Handle audio based on remove_audio flag
+        if remove_audio:
+            cmd.extend(['-an'])     # Remove audio
+        else:
+            cmd.extend([
+                '-c:a', 'aac',      # Use AAC for audio
+                '-b:a', '128k',     # Set audio bitrate to 128k
+            ])
+            
+        # Add output path and movflags for web streaming
+        cmd.extend([
+            '-movflags', '+faststart',
+            '-y',
+            output_path
+        ])
+    # Standard optimization modes
+    elif video_format == 'webm':
         # For WebM, use VP9
         codec = 'libvpx-vp9'
         if not bitrate:
@@ -292,12 +325,27 @@ def process_file(file_data):
         preset = options.get('preset', 'medium')
         video_format = options.get('video_format', 'mp4')
         bitrate = options.get('bitrate', None)
+        patches_mode = options.get('patches_mode', False)
+        remove_audio = options.get('remove_audio', False)
         
+        # If in pATCHES mode, force MP4 format
+        if patches_mode:
+            video_format = 'mp4'
+            
         # Adjust the output path based on the format
         if not output_path.lower().endswith(f'.{video_format}'):
             output_path = os.path.splitext(output_path)[0] + f'.{video_format}'
         
-        success = transcode_video(input_path, output_path, max_width, preset, video_format, bitrate)
+        success = transcode_video(
+            input_path, 
+            output_path, 
+            max_width, 
+            preset, 
+            video_format, 
+            bitrate, 
+            patches_mode,
+            remove_audio
+        )
         return (success, input_path, output_path if success else None)
     
     return (False, input_path, None)
@@ -340,6 +388,12 @@ def process_directory(directory, options=None):
         output_dir = os.path.join(os.path.abspath(directory), 'optimized', 'tiny')
         max_width = 640
         quality = 75 if output_format == 'webp' else 4
+    elif size == 'patches':
+        output_dir = os.path.join(os.path.abspath(directory), 'optimized', 'patches')
+        max_width = 1280
+        quality = 65 if output_format == 'webp' else 6  # Higher compression for images
+        # For videos, we'll apply special settings in the transcode_video function
+        options['patches_mode'] = True  # Flag to use special settings for videos
     else:  # Default to 'optimized'
         output_dir = os.path.join(os.path.abspath(directory), 'optimized')
         max_width = 1920

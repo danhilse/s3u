@@ -26,7 +26,8 @@ DEFAULT_CONFIG = {
     "video_format": "mp4",      # Default video format (mp4, webm)
     "optimize_videos": "no",    # Whether to transcode videos
     "video_preset": "medium",   # Video encoding preset
-    "max_workers": 4            # Maximum number of concurrent optimization workers
+    "max_workers": 4,           # Maximum number of concurrent optimization workers
+    "remove_audio": "no"        # Whether to remove audio from videos (for pATCHES mode)
 }
 
 # Configuration options and their allowed values
@@ -56,10 +57,15 @@ CONFIG_OPTIONS = {
         "values": ["replace", "prepend", "append"],
         "default": "replace"
     },
-        "image_format": {
+    "image_format": {
         "description": "Default image output format",
         "values": ["webp", "jpg", "avif"],
         "default": "webp"
+    },
+    "remove_audio": {
+        "description": "Whether to remove audio from videos (pATCHES mode)",
+        "values": ["yes", "no"],
+        "default": "no"
     },
     "video_format": {
         "description": "Default video output format",

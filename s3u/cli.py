@@ -188,6 +188,7 @@ def main():
     optimized_files = None
     source_dir = '.'
 
+
     # Use config setting for optimize
     optimize_config = config.get('optimize', 'auto')
 
@@ -208,7 +209,8 @@ def main():
         size_options = {
             '1': 'optimized',  # 1920px
             '2': 'small',      # 1080px
-            '3': 'tiny'        # 640px
+            '3': 'tiny',       # 640px
+            '4': 'patches'     # 1280px with higher compression
         }
         
         # Determine the default choice based on the config
@@ -217,7 +219,7 @@ def main():
             if size == default_size:
                 default_choice = choice
         
-        size_choice = get_input(f"Select size (1=optimized [1920px], 2=small [1080px], 3=tiny [640px])", default_choice)
+        size_choice = get_input(f"Select size (1=optimized [1920px], 2=small [1080px], 3=tiny [640px], 4=pATCHES [1280px, high compression])", default_choice)
         optimize_size = size_options.get(size_choice, default_size)
         
         # Get image format preference
@@ -246,6 +248,7 @@ def main():
         optimize_videos = False
         video_format = config.get('video_format', 'mp4')
         video_preset = config.get('video_preset', 'medium')
+        remove_audio = False
         
         if has_videos:
             optimize_videos_default = config.get('optimize_videos', 'no')
@@ -291,6 +294,13 @@ def main():
                 preset_prompt = "Video encoding preset (1=fast [quick], 2=medium [balanced], 3=slow [best quality])"
                 preset_choice = get_input(preset_prompt, default_preset_choice)
                 video_preset = preset_options.get(preset_choice, default_preset)
+                
+                # For pATCHES mode, ask about removing audio
+                if optimize_size == 'patches':
+                    remove_audio_default = config.get('remove_audio', 'no')
+                    remove_audio_prompt = "Remove audio from videos? (y/n)"
+                    remove_audio_input = get_input(remove_audio_prompt, "y" if remove_audio_default == "yes" else "n")
+                    remove_audio = remove_audio_input.lower() == 'y'
         
         # Get number of optimization workers
         default_workers = config.get('max_workers', 4)
@@ -308,7 +318,8 @@ def main():
             'video_format': video_format,
             'optimize_videos': optimize_videos,
             'preset': video_preset,
-            'max_workers': max_workers
+            'max_workers': max_workers,
+            'remove_audio': remove_audio
         }
         
         # Pass the options to the optimizer
@@ -321,6 +332,7 @@ def main():
         else:
             # Update the source directory to point to the optimized files
             print(f"Will upload {len(optimized_files)} optimized files from {source_dir}")
+
     
     # Get list of existing folders for tab completion
     print("Fetching existing folders for tab completion...")
@@ -399,19 +411,20 @@ def main():
         concurrent_input = get_input(f"Concurrent uploads (optional, press Enter for {config_concurrent})")
         concurrent = int(concurrent_input) if concurrent_input else config_concurrent
     
-    # Confirm settings
+    # Update the "Confirm settings" section with new information
     print("\nUpload Settings:")
     print(f"  Extensions: {extensions if extensions else 'All files'}")
-    if only_videos:
-        print("  No optimization (video files only)")
+
     if optimize:
         print(f"  Media optimization: {optimize_size}")
         print(f"  Image format: {image_format}")
         
         if optimize_videos:
             print(f"  Video optimization: Enabled")
-            print(f"  Video format: {video_format}")
-            print(f"  Video preset: {video_preset}")
+            print(f"  Video format: {video_format if optimize_size != 'patches' else 'mp4 (forced by pATCHES mode)'}")
+            print(f"  Video preset: {video_preset if optimize_size != 'patches' else 'slow (forced by pATCHES mode)'}")
+            if optimize_size == 'patches':
+                print(f"  Remove audio: {'Yes' if remove_audio else 'No'}")
         else:
             print(f"  Video optimization: Disabled")
             
