@@ -9,9 +9,102 @@ import pyperclip
 from datetime import datetime
 from botocore.exceptions import NoCredentialsError
 
-from .s3_core import get_s3_session, BUCKET_NAME, CLOUDFRONT_URL, ensure_s3_folder_exists
+from .s3_core import get_s3_session, get_bucket_name, get_cloudfront_url, ensure_s3_folder_exists
 from .formatter import format_output
-from .browser import list_s3_folder_objects
+
+# Remove the circular import between browser.py and uploader.py
+# This function will be used to get existing files
+
+async def list_s3_folder_objects_internal(s3_folder, return_urls_only=False, limit=None, output_format='array', recursive=False):
+    """
+    List objects in an S3 folder and return their CloudFront URLs.
+    This is an internal version to avoid circular imports.
+    For full functionality, use the version in browser.py.
+    
+    Args:
+        s3_folder (str): The folder name in the S3 bucket to list
+        return_urls_only (bool): If True, just return the URLs without printing or clipboard copy
+        limit (int): Optional limit on the number of URLs to return
+        output_format (str): Format for output: 'array', 'json', 'xml', 'html', or 'csv'
+        recursive (bool): Whether to list objects recursively including subfolders
+        
+    Returns:
+        list: List of CloudFront URLs or objects with metadata for items in the folder
+    """
+    session = get_s3_session()
+    urls = []
+    objects = []
+    
+    try:
+        async with session.client('s3') as s3:
+            paginator = s3.get_paginator('list_objects_v2')
+            
+            # Add trailing slash if not present to ensure we're listing folder contents
+            folder_prefix = s3_folder if s3_folder.endswith('/') else f"{s3_folder}/"
+            
+            if recursive:
+                # List all objects recursively (no delimiter)
+                async for page in paginator.paginate(Bucket=get_bucket_name(), Prefix=folder_prefix):
+                    if 'Contents' in page:
+                        for obj in page['Contents']:
+                            # Skip the folder itself and any subfolder markers
+                            if obj['Key'] != folder_prefix and not obj['Key'].endswith('/'):
+                                url = f"{get_cloudfront_url()}/{obj['Key']}"
+                                urls.append(url)
+                                
+                                # Collect metadata for formats that need it
+                                if output_format != 'array':
+                                    obj_meta = {
+                                        'url': url,
+                                        'filename': os.path.basename(obj['Key']),
+                                        's3_path': obj['Key'],
+                                        'size': obj['Size'],
+                                        'last_modified': obj['LastModified'].isoformat(),
+                                        'type': os.path.splitext(obj['Key'])[1].lstrip('.').lower() if '.' in obj['Key'] else '',
+                                        'subfolder': os.path.dirname(obj['Key'].replace(folder_prefix, '')) if '/' in obj['Key'].replace(folder_prefix, '') else ''
+                                    }
+                                    objects.append(obj_meta)
+            else:
+                # List only objects in the specific folder (using delimiter)
+                async for page in paginator.paginate(Bucket=get_bucket_name(), Prefix=folder_prefix, Delimiter='/'):
+                    if 'Contents' in page:
+                        for obj in page['Contents']:
+                            # Skip the folder itself (which appears as a key)
+                            if obj['Key'] != folder_prefix:
+                                url = f"{get_cloudfront_url()}/{obj['Key']}"
+                                urls.append(url)
+                                
+                                # Collect metadata for formats that need it
+                                if output_format != 'array':
+                                    obj_meta = {
+                                        'url': url,
+                                        'filename': os.path.basename(obj['Key']),
+                                        's3_path': obj['Key'],
+                                        'size': obj['Size'],
+                                        'last_modified': obj['LastModified'].isoformat(),
+                                        'type': os.path.splitext(obj['Key'])[1].lstrip('.').lower() if '.' in obj['Key'] else ''
+                                    }
+                                    objects.append(obj_meta)
+            
+            # Sort the URLs alphabetically for consistent results when limiting
+            urls.sort()
+            if objects:
+                objects.sort(key=lambda x: x['s3_path'])
+            
+            # Apply limit if specified
+            if limit and limit > 0:
+                if limit < len(urls):
+                    urls = urls[:limit]
+                if objects and limit < len(objects):
+                    objects = objects[:limit]
+            
+            return urls if output_format == 'array' or return_urls_only else objects
+    except NoCredentialsError:
+        print("Credentials not available")
+        sys.exit(1)
+    except Exception as e:
+        print(f"Error listing objects in folder {s3_folder}: {str(e)}")
+        return []
 
 def should_process_file(filename, extensions):
     """
@@ -124,7 +217,7 @@ async def upload_file(session, file_path, s3_folder):
             with open(file_path, 'rb') as f:
                 await s3.upload_fileobj(
                     f, 
-                    BUCKET_NAME, 
+                    get_bucket_name(), 
                     s3_key,
                     Callback=progress_callback,
                     ExtraArgs={
@@ -137,7 +230,7 @@ async def upload_file(session, file_path, s3_folder):
         print()
         
         # Generate CloudFront URL for the file
-        cloudfront_url = f"{CLOUDFRONT_URL}/{s3_key}"
+        cloudfront_url = f"{get_cloudfront_url()}/{s3_key}"
         
         # Return success with URL and metadata
         return True, {
@@ -146,7 +239,7 @@ async def upload_file(session, file_path, s3_folder):
             'size': file_size,
             'type': file_type,
             'timestamp': timestamp.isoformat(),
-            'bucket': BUCKET_NAME
+            'bucket': get_bucket_name()
         }
     
     except FileNotFoundError:
@@ -387,9 +480,6 @@ async def upload_files(s3_folder, extensions=None, rename_prefix=None, rename_mo
     # Create tasks for all file uploads
     tasks = [upload_with_semaphore(file) for file in renamed_files]
     
-    # Rest of the function remains the same...
-    # (existing upload logic)
-    
     # Progress tracking
     total_files = len(tasks)
     print(f"Starting upload of {total_files} files...")
@@ -412,13 +502,13 @@ async def upload_files(s3_folder, extensions=None, rename_prefix=None, rename_mo
     if include_existing:
         print("Including existing files in the CDN links...")
         if output_format == 'array':
-            existing_urls = await list_s3_folder_objects(s3_folder, return_urls_only=True, recursive=(subfolder_mode == 'preserve'))
+            existing_urls = await list_s3_folder_objects_internal(s3_folder, return_urls_only=True, recursive=(subfolder_mode == 'preserve'))
             # Merge the lists, ensuring no duplicates by converting to a set first
             all_urls = list(set(uploaded_urls + existing_urls))
             print(f"Total of {len(all_urls)} files in folder (new + existing)")
             all_objects = []  # We don't need objects for array format
         else:
-            existing_objects = await list_s3_folder_objects(s3_folder, return_urls_only=False, output_format='json', recursive=(subfolder_mode == 'preserve'))
+            existing_objects = await list_s3_folder_objects_internal(s3_folder, return_urls_only=False, output_format='json', recursive=(subfolder_mode == 'preserve'))
             
             # Create a set of uploaded URLs for faster lookup
             uploaded_url_set = set(uploaded_urls)

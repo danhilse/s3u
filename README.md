@@ -263,7 +263,6 @@ Example configuration file:
 ## Notes
 
 - The tool uses AWS credentials from your environment
-- Upload destination is fixed to the "dh.images" bucket
 - CloudFront distribution URL is hardcoded to "https://d1lbnboj0lfh6w.cloudfront.net"
 - Image optimization requires FFmpeg and FFprobe installed on your system
 - Video files (MP4, MOV) are supported but not optimized

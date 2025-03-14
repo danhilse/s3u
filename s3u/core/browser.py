@@ -8,7 +8,7 @@ import pyperclip
 from datetime import datetime
 from botocore.exceptions import NoCredentialsError
 
-from .s3_core import get_s3_session, BUCKET_NAME, CLOUDFRONT_URL
+from .s3_core import get_s3_session, get_bucket_name, get_cloudfront_url
 from .formatter import format_output
 
 async def list_folders(prefix=""):
@@ -28,7 +28,7 @@ async def list_folders(prefix=""):
         async with session.client('s3') as s3:
             paginator = s3.get_paginator('list_objects_v2')
             
-            async for page in paginator.paginate(Bucket=BUCKET_NAME, Delimiter='/'):
+            async for page in paginator.paginate(Bucket=get_bucket_name(), Delimiter='/'):
                 if 'CommonPrefixes' in page:
                     for prefix_obj in page['CommonPrefixes']:
                         folder_name = prefix_obj['Prefix'].rstrip('/')
@@ -39,7 +39,7 @@ async def list_folders(prefix=""):
                 folder_prefix = folder_name + '/'
                 
                 item_count = 0
-                async for page in paginator.paginate(Bucket=BUCKET_NAME, Prefix=folder_prefix):
+                async for page in paginator.paginate(Bucket=get_bucket_name(), Prefix=folder_prefix):
                     if 'Contents' in page:
                         # Don't count the folder marker itself
                         item_count += sum(1 for obj in page['Contents'] if obj['Key'] != folder_prefix)
@@ -81,12 +81,12 @@ async def list_s3_folder_objects(s3_folder, return_urls_only=False, limit=None, 
             
             if recursive:
                 # List all objects recursively (no delimiter)
-                async for page in paginator.paginate(Bucket=BUCKET_NAME, Prefix=folder_prefix):
+                async for page in paginator.paginate(Bucket=get_bucket_name(), Prefix=folder_prefix):
                     if 'Contents' in page:
                         for obj in page['Contents']:
                             # Skip the folder itself and any subfolder markers
                             if obj['Key'] != folder_prefix and not obj['Key'].endswith('/'):
-                                url = f"{CLOUDFRONT_URL}/{obj['Key']}"
+                                url = f"{get_cloudfront_url()}/{obj['Key']}"
                                 urls.append(url)
                                 
                                 # Collect metadata for formats that need it
@@ -103,12 +103,12 @@ async def list_s3_folder_objects(s3_folder, return_urls_only=False, limit=None, 
                                     objects.append(obj_meta)
             else:
                 # List only objects in the specific folder (using delimiter)
-                async for page in paginator.paginate(Bucket=BUCKET_NAME, Prefix=folder_prefix, Delimiter='/'):
+                async for page in paginator.paginate(Bucket=get_bucket_name(), Prefix=folder_prefix, Delimiter='/'):
                     if 'Contents' in page:
                         for obj in page['Contents']:
                             # Skip the folder itself (which appears as a key)
                             if obj['Key'] != folder_prefix:
-                                url = f"{CLOUDFRONT_URL}/{obj['Key']}"
+                                url = f"{get_cloudfront_url()}/{obj['Key']}"
                                 urls.append(url)
                                 
                                 # Collect metadata for formats that need it

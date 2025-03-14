@@ -174,24 +174,56 @@ async def run_setup():
     print("Setup complete! You can now use s3u.")
 
 async def main():
+    # Create argument parser for optional command line arguments FIRST
+    parser = argparse.ArgumentParser(description="Upload files to S3 bucket with optional renaming.")
+    parser.add_argument("-c", "--concurrent", type=int, help="Maximum concurrent uploads")
+    parser.add_argument("-b", "--browse", metavar="FOLDER", help="Get CDN links from an existing folder in the bucket")
+    parser.add_argument("-d", "--download", metavar="FOLDER", help="Download all files from a folder in the bucket")
+    parser.add_argument("-o", "--output", metavar="DIR", help="Output directory for downloads (used with -d)")
+    parser.add_argument("-ls", "--list", action="store_true", help="List all folders in the bucket with item count")
+    parser.add_argument("-config", nargs="*", metavar="OPTION [VALUE]", help="Configure persistent settings (use without args to show all options)")
+    parser.add_argument("-setup", action="store_true", help="Run the setup wizard to configure S3U")
+    parser.add_argument("count", nargs="?", type=int, help="Optional number of files to process (for -b or -d)")
+    parser.add_argument("-f", "--first", action="store_true", help="Copy only the first URL to clipboard")
+    parser.add_argument("-sf", "--subfolder-mode", choices=["ignore", "pool", "preserve"], 
+                        help="How to handle subfolders: ignore, pool, or preserve")
+    parser.add_argument("path", nargs="?", help="Path to the directory containing files to upload")
+    args = parser.parse_args()
+    
+    # Handle the setup flag first
+    if args.setup:
+        from .setup import run_setup
+        await run_setup(force=True)
+        print("\nSetup completed. Run 's3u' again to use the tool.")
+        return
+
+    # Handle special commands next (config, list, browse, download)
+    if args.config is not None:
+        return handle_config_command(args.config)
+    
+    if args.list:
+        return await list_folders()
+    
+    if args.browse:
+        # Load config for format setting
+        config = load_config()
+        count = args.count or 0  # 0 means all files
+        return await list_s3_folder_objects(args.browse, limit=count, output_format=config.get('format', 'array'))
+    
+    if args.download:
+        count = args.count or 0  # 0 means all files
+        output_dir = args.output or '.'
+        return await download_folder(args.download, output_dir, limit=count)
+    
     # Load configuration
-    # Check if setup is complete
     config = load_config()
+    
+    # Check if setup is complete - only after handling special commands
     if not config.get("setup_complete", False):
         print("Initial setup required. Running setup wizard...")
         from .setup import run_setup
-        asyncio.run(run_setup())
-        # Reload config
-        config = load_config()
-        if not config.get("setup_complete", False):
-            print("Setup not completed. Exiting.")
-            return
-    
-    # Check if setup is complete
-    if not config.get("setup_complete", False):
-        print("Initial setup required. Running setup wizard...")
         await run_setup()
-        # If this is first run, exit after setup
+        print("\nSetup complete! Run 's3u' again to start using the tool.")
         return
     
     # Get bucket name and CloudFront URL from config
@@ -211,41 +243,10 @@ async def main():
         if input("Continue anyway? (y/n) [n]: ").lower() != 'y':
             return
     
-    # Create argument parser for optional command line arguments
-    parser = argparse.ArgumentParser(description="Upload files to S3 bucket with optional renaming.")
-    parser.add_argument("-c", "--concurrent", type=int, help="Maximum concurrent uploads")
-    parser.add_argument("-b", "--browse", metavar="FOLDER", help="Get CDN links from an existing folder in the bucket")
-    parser.add_argument("-d", "--download", metavar="FOLDER", help="Download all files from a folder in the bucket")
-    parser.add_argument("-o", "--output", metavar="DIR", help="Output directory for downloads (used with -d)")
-    parser.add_argument("-ls", "--list", action="store_true", help="List all folders in the bucket with item count")
-    parser.add_argument("-config", nargs="*", metavar="OPTION [VALUE]", help="Configure persistent settings (use without args to show all options)")
-    parser.add_argument("count", nargs="?", type=int, help="Optional number of files to process (for -b or -d)")
-    parser.add_argument("-f", "--first", action="store_true", help="Copy only the first URL to clipboard")
-    parser.add_argument("-sf", "--subfolder-mode", choices=["ignore", "pool", "preserve"], 
-                        help="How to handle subfolders: ignore, pool, or preserve")
-    parser.add_argument("path", nargs="?", help="Path to the directory containing files to upload")
-    args = parser.parse_args()
-    
     # Initialize only_first flag 
     only_first = False
     if args.first:
         only_first = True
-
-    # Handle special commands first (config, list, browse, download)
-    if args.config is not None:
-        return handle_config_command(args.config)
-    
-    if args.list:
-        return await list_folders()
-    
-    if args.browse:
-        count = args.count or 0  # 0 means all files
-        return await list_s3_folder_objects(args.browse, limit=count, output_format=config.get('format', 'array'))
-    
-    if args.download:
-        count = args.count or 0  # 0 means all files
-        output_dir = args.output or '.'
-        return await download_folder(args.download, output_dir, limit=count)
     
     # Set the source directory from path argument if provided
     source_dir = '.'
@@ -279,6 +280,7 @@ async def main():
     
     print("S3 Upload Utility")
     print("-----------------")
+    
     
     # Get file extensions
     extensions_input = get_input("File extensions to include (e.g., jpg png mp4 mov or jpg,png,mp4,mov)")
@@ -608,6 +610,14 @@ async def main():
         os.chdir(original_dir)
         
     return upload_result
+
+def run_cli():
+    """
+    Synchronous entry point for the CLI command.
+    This function wraps the async main function with asyncio.run().
+    """
+    asyncio.run(main())
+
 
 if __name__ == "__main__":
     asyncio.run(main())

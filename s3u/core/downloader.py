@@ -7,7 +7,7 @@ import sys
 import asyncio
 from botocore.exceptions import NoCredentialsError
 
-from .s3_core import get_s3_session, BUCKET_NAME
+from .s3_core import get_s3_session, get_bucket_name
 from ..utils.progress import ProgressBar
 
 async def download_file(s3, file_key, output_dir, semaphore, progress, progress_lock):
@@ -40,7 +40,7 @@ async def download_file(s3, file_key, output_dir, semaphore, progress, progress_
             os.makedirs(os.path.dirname(local_path), exist_ok=True)
             
             # Download the file
-            await s3.download_file(BUCKET_NAME, file_key, local_path)
+            await s3.download_file(get_bucket_name(), file_key, local_path)
             
             # Update the progress bar
             async with progress_lock:
@@ -85,7 +85,7 @@ async def download_folder(folder_name, output_dir=None, limit=None):
             paginator = s3.get_paginator('list_objects_v2')
             
             print(f"Scanning folder: {folder_name}")
-            async for page in paginator.paginate(Bucket=BUCKET_NAME, Prefix=folder_prefix):
+            async for page in paginator.paginate(Bucket=get_bucket_name(), Prefix=folder_prefix):
                 if 'Contents' in page:
                     for obj in page['Contents']:
                         # Skip the folder itself

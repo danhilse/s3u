@@ -10,8 +10,8 @@ setup(
         "questionary",  # Added for interactive menus
     ],
     entry_points={
-        "console_scripts": [
-            "s3u=s3u.cli:main",
+        'console_scripts': [
+            's3u=s3u.cli:run_cli',  # Use the synchronous wrapper function
         ],
     },
     author="Your Name",

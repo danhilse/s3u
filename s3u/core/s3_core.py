@@ -8,7 +8,7 @@ import aioboto3
 from botocore.exceptions import NoCredentialsError
 
 # Import config functions
-from .config import load_config
+from ..config import load_config
 
 def get_s3_session():
     """
