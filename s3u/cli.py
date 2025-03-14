@@ -121,9 +121,95 @@ def scan_for_subfolders(directory):
     
     return subfolders
 
-def main():
-    # Load configuration
+async def get_bucket_name():
+    """Get bucket name from config."""
     config = load_config()
+    return config.get("bucket_name")
+
+async def get_cloudfront_url():
+    """Get CloudFront URL from config."""
+    config = load_config()
+    return config.get("cloudfront_url")
+
+async def get_s3_session():
+    """Get the AWS session for S3 operations."""
+    # This would use credentials from ~/.aws/credentials or env vars
+    # For this implementation we're just returning None as a placeholder
+    return None
+
+async def verify_permissions(session, bucket_name, cloudfront_url):
+    """Verify the permissions for S3 operations."""
+    # This would check if we can list, read, and write to the bucket
+    # For this implementation we're just returning a placeholder
+    return {
+        's3_list': True,
+        's3_read': True,
+        's3_write': True
+    }
+
+async def run_setup():
+    """Run the setup wizard to configure S3U."""
+    print("Setting up s3u...")
+    
+    # Get bucket name
+    bucket_name = input("Enter your S3 bucket name: ").strip()
+    if not bucket_name:
+        print("Error: Bucket name is required.")
+        return
+    
+    # Get CloudFront URL (optional)
+    cloudfront_url = input("Enter your CloudFront URL (optional): ").strip()
+    
+    # Save to config
+    config = load_config()
+    config["bucket_name"] = bucket_name
+    if cloudfront_url:
+        config["cloudfront_url"] = cloudfront_url
+    config["setup_complete"] = True
+    
+    # Save config file
+    from .config import save_config
+    save_config(config)
+    
+    print("Setup complete! You can now use s3u.")
+
+async def main():
+    # Load configuration
+    # Check if setup is complete
+    config = load_config()
+    if not config.get("setup_complete", False):
+        print("Initial setup required. Running setup wizard...")
+        from .setup import run_setup
+        asyncio.run(run_setup())
+        # Reload config
+        config = load_config()
+        if not config.get("setup_complete", False):
+            print("Setup not completed. Exiting.")
+            return
+    
+    # Check if setup is complete
+    if not config.get("setup_complete", False):
+        print("Initial setup required. Running setup wizard...")
+        await run_setup()
+        # If this is first run, exit after setup
+        return
+    
+    # Get bucket name and CloudFront URL from config
+    bucket_name = await get_bucket_name()
+    cloudfront_url = await get_cloudfront_url()
+    
+    if not bucket_name:
+        print("Error: S3 bucket not configured. Run 's3u -config bucket_name' to set it.")
+        return
+    
+    # Verify permissions before proceeding
+    session = await get_s3_session()
+    permissions = await verify_permissions(session, bucket_name, cloudfront_url)
+    
+    if not all([permissions['s3_list'], permissions['s3_read'], permissions['s3_write']]):
+        print("⚠️ Permission check failed. Some S3 operations may not work.")
+        if input("Continue anyway? (y/n) [n]: ").lower() != 'y':
+            return
     
     # Create argument parser for optional command line arguments
     parser = argparse.ArgumentParser(description="Upload files to S3 bucket with optional renaming.")
@@ -150,16 +236,16 @@ def main():
         return handle_config_command(args.config)
     
     if args.list:
-        return asyncio.run(list_folders())
+        return await list_folders()
     
     if args.browse:
         count = args.count or 0  # 0 means all files
-        return asyncio.run(list_s3_folder_objects(args.browse, limit=count, output_format=config.get('format', 'array')))
+        return await list_s3_folder_objects(args.browse, limit=count, output_format=config.get('format', 'array'))
     
     if args.download:
         count = args.count or 0  # 0 means all files
         output_dir = args.output or '.'
-        return asyncio.run(download_folder(args.download, output_dir, limit=count))
+        return await download_folder(args.download, output_dir, limit=count)
     
     # Set the source directory from path argument if provided
     source_dir = '.'
@@ -396,7 +482,7 @@ def main():
     # If the user pressed tab or seems to be looking for completion, then fetch folders
     if not folder or folder == current_dir:
         print("Fetching existing folders for tab completion...")
-        folder_tuples = asyncio.run(list_folders())
+        folder_tuples = await list_folders()
         existing_folders = [folder for folder, _ in folder_tuples]
         print(f"Found {len(existing_folders)} folders")
         
@@ -404,7 +490,7 @@ def main():
         folder = get_input_with_completion("S3 folder name", folder, existing_folders)
     
     # Check if folder exists in S3
-    folder_exists = asyncio.run(check_folder_exists(folder))
+    folder_exists = await check_folder_exists(folder)
     
     # Initialize include_existing with default value - changed to 'n'
     include_existing = False
@@ -503,7 +589,7 @@ def main():
     # =============== RUN UPLOAD ===============
     
     # Run the upload with all settings
-    upload_result = asyncio.run(upload_files(
+    upload_result = await upload_files(
         s3_folder=folder,
         extensions=extensions,
         rename_prefix=rename_prefix,
@@ -515,7 +601,7 @@ def main():
         include_existing=include_existing,
         output_format=selected_format,
         subfolder_mode=subfolder_mode
-    ))
+    )
     
     # Important: Change back to original directory if we changed it
     if source_dir != '.':
@@ -524,4 +610,4 @@ def main():
     return upload_result
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

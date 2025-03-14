@@ -7,18 +7,47 @@ import sys
 import aioboto3
 from botocore.exceptions import NoCredentialsError
 
-# Constants to be used across the application
-BUCKET_NAME = "dh.images"
-CLOUDFRONT_URL = "https://d1lbnboj0lfh6w.cloudfront.net"
+# Import config functions
+from .config import load_config
 
 def get_s3_session():
     """
-    Create and return an aioboto3 session.
+    Create and return an aioboto3 session with profile from config.
     
     Returns:
         aioboto3.Session: A boto3 session for S3 operations
     """
-    return aioboto3.Session()
+    config = load_config()
+    profile_name = config.get("aws_profile", "")
+    return aioboto3.Session(profile_name=profile_name if profile_name else None)
+
+def get_bucket_name():
+    """
+    Get the configured bucket name.
+    
+    Returns:
+        str: The S3 bucket name from config
+    """
+    config = load_config()
+    return config.get("bucket_name", "")
+
+def get_cloudfront_url(s3_path=None):
+    """
+    Get CloudFront URL, optionally for a specific S3 path.
+    
+    Args:
+        s3_path (str, optional): The S3 object path
+        
+    Returns:
+        str: The CloudFront URL, with path if provided
+    """
+    config = load_config()
+    base_url = config.get("cloudfront_url", "")
+    
+    if s3_path:
+        return f"{base_url}/{s3_path}"
+    else:
+        return base_url
 
 async def check_folder_exists(s3_folder):
     """
@@ -31,6 +60,7 @@ async def check_folder_exists(s3_folder):
         bool: True if the folder exists, False otherwise
     """
     session = get_s3_session()
+    bucket_name = get_bucket_name()
     
     try:
         async with session.client('s3') as s3:
@@ -38,7 +68,7 @@ async def check_folder_exists(s3_folder):
             folder_prefix = s3_folder if s3_folder.endswith('/') else f"{s3_folder}/"
             
             response = await s3.list_objects_v2(
-                Bucket=BUCKET_NAME,
+                Bucket=bucket_name,
                 Prefix=folder_prefix,
                 MaxKeys=1
             )
@@ -63,10 +93,12 @@ async def ensure_s3_folder_exists(session, s3_folder):
     Returns:
         bool: True if successful, False otherwise
     """
+    bucket_name = get_bucket_name()
+    
     async with session.client('s3') as s3:
         try:
-            await s3.put_object(Bucket=BUCKET_NAME, Key=(s3_folder + '/'))
-            print(f"Ensured S3 folder exists: s3://{BUCKET_NAME}/{s3_folder}/")
+            await s3.put_object(Bucket=bucket_name, Key=(s3_folder + '/'))
+            print(f"Ensured S3 folder exists: s3://{bucket_name}/{s3_folder}/")
             return True
         except NoCredentialsError:
             print("Credentials not available")
@@ -74,18 +106,6 @@ async def ensure_s3_folder_exists(session, s3_folder):
         except Exception as e:
             print(f"Error ensuring folder exists: {str(e)}")
             return False
-
-def get_cloudfront_url(s3_path):
-    """
-    Generate a CloudFront URL for an S3 object path.
-    
-    Args:
-        s3_path (str): The S3 object path
-        
-    Returns:
-        str: The CloudFront URL
-    """
-    return f"{CLOUDFRONT_URL}/{s3_path}"
 
 def format_s3_path(s3_folder, filename):
     """

@@ -33,7 +33,13 @@ DEFAULT_CONFIG = {
     "video_preset": "medium",   # Video encoding preset
     "max_workers": 4,           # Maximum number of concurrent optimization workers
     "remove_audio": "no",       # Whether to remove audio from videos (for pATCHES mode)
-    "subfolder_mode": "ignore"  # How to handle subfolders when uploading
+    "subfolder_mode": "ignore",  # How to handle subfolders when uploading
+    
+    "aws_profile": "",  # Blank means default profile
+    "bucket_name": "",  # Will prompt on first run
+    "cloudfront_url": "",
+    "region": "",
+    "setup_complete": False  # Flag to track if setup has run
 }
 
 # Configuration options and their allowed values
@@ -98,6 +104,21 @@ CONFIG_OPTIONS = {
     "values": ["ignore", "pool", "preserve"],
     "default": "ignore"
 },
+        "aws_profile": {
+        "description": "AWS profile to use (leave blank for default)",
+        "values": [],  # Will be populated with available profiles
+        "default": ""
+    },
+    "bucket_name": {
+        "description": "S3 bucket for uploads and downloads",
+        "values": [],  # Will be populated dynamically
+        "default": ""
+    },
+    "cloudfront_url": {
+        "description": "CloudFront distribution URL",
+        "values": [],
+        "default": ""
+    }
 }
 
 def ensure_config_dir():
@@ -136,24 +157,13 @@ def load_config():
         return DEFAULT_CONFIG.copy()
 
 def save_config(config):
-    """
-    Save configuration to the config file.
+    """Save configuration to config file."""
+    config_dir = os.path.expanduser("~/.s3u")
+    os.makedirs(config_dir, exist_ok=True)
     
-    Args:
-        config (dict): The configuration dictionary to save
-    
-    Returns:
-        bool: True if successful, False otherwise
-    """
-    ensure_config_dir()
-    
-    try:
-        with open(CONFIG_FILE, 'w') as f:
-            json.dump(config, f, indent=4)
-        return True
-    except IOError as e:
-        print(f"Error saving config: {str(e)}")
-        return False
+    config_path = os.path.join(config_dir, "config.json")
+    with open(config_path, "w") as f:
+        json.dump(config, f, indent=2)
 
 def get_config_value(key, default=None):
     """
