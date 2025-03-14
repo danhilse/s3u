@@ -1,2 +1,0 @@
-[console_scripts]
-s3u = s3u.cli:main
