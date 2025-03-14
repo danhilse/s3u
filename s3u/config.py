@@ -22,11 +22,11 @@ CONFIG_FILE = os.path.join(CONFIG_DIR, 'config.json')
 
 # Default configuration settings
 DEFAULT_CONFIG = {
-    "format": "array",     # Output format: array, json, xml, html
-    "concurrent": 5,       # Default concurrent uploads
-    "optimize": "auto",    # Default image optimization: auto, always, never
-    "size": "optimized",   # Default optimization size: optimized, small, tiny
-    "rename_mode": "replace"  # Default rename mode: replace, prepend, append
+    "image_format": "webp",     # Default image format (webp, jpg, avif)
+    "video_format": "mp4",      # Default video format (mp4, webm)
+    "optimize_videos": "no",    # Whether to transcode videos
+    "video_preset": "medium",   # Video encoding preset
+    "max_workers": 4            # Maximum number of concurrent optimization workers
 }
 
 # Configuration options and their allowed values
@@ -55,6 +55,31 @@ CONFIG_OPTIONS = {
         "description": "How to apply the rename prefix to filenames",
         "values": ["replace", "prepend", "append"],
         "default": "replace"
+    },
+        "image_format": {
+        "description": "Default image output format",
+        "values": ["webp", "jpg", "avif"],
+        "default": "webp"
+    },
+    "video_format": {
+        "description": "Default video output format",
+        "values": ["mp4", "webm"],
+        "default": "mp4"
+    },
+    "optimize_videos": {
+        "description": "Whether to transcode videos by default",
+        "values": ["yes", "no"],
+        "default": "no"
+    },
+    "video_preset": {
+        "description": "Video encoding preset (faster vs smaller files)",
+        "values": ["fast", "medium", "slow"],
+        "default": "medium"
+    },
+    "max_workers": {
+        "description": "Maximum number of parallel optimization workers",
+        "values": list(range(1, 17)),  # 1-16 workers
+        "default": 4
     }
 }
 
