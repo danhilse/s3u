@@ -101,6 +101,7 @@ def parse_extensions(extensions_input):
         return [ext.strip() for ext in extensions_input.split(',') if ext.strip()]
     else:
         return [ext.strip() for ext in extensions_input.split() if ext.strip()]
+
 def scan_for_subfolders(directory):
     """
     Scan for subfolders in the given directory.
@@ -136,14 +137,56 @@ def main():
     parser.add_argument("-f", "--first", action="store_true", help="Copy only the first URL to clipboard")
     parser.add_argument("-sf", "--subfolder-mode", choices=["ignore", "pool", "preserve"], 
                         help="How to handle subfolders: ignore, pool, or preserve")
+    parser.add_argument("path", nargs="?", help="Path to the directory containing files to upload")
     args = parser.parse_args()
     
-    
+    # Initialize only_first flag 
+    only_first = False
     if args.first:
         only_first = True
 
     # Handle special commands first (config, list, browse, download)
-    # (same as before, no changes needed)
+    if args.config is not None:
+        return handle_config_command(args.config)
+    
+    if args.list:
+        return asyncio.run(list_folders())
+    
+    if args.browse:
+        count = args.count or 0  # 0 means all files
+        return asyncio.run(list_s3_folder_objects(args.browse, limit=count, output_format=config.get('format', 'array')))
+    
+    if args.download:
+        count = args.count or 0  # 0 means all files
+        output_dir = args.output or '.'
+        return asyncio.run(download_folder(args.download, output_dir, limit=count))
+    
+    # Set the source directory from path argument if provided
+    source_dir = '.'
+    if args.path:
+        source_dir = args.path
+        
+        # Strip quotes if present
+        if (source_dir.startswith('"') and source_dir.endswith('"')) or \
+           (source_dir.startswith("'") and source_dir.endswith("'")):
+            source_dir = source_dir[1:-1]
+            
+        # Verify path exists
+        if not os.path.isdir(source_dir):
+            print(f"Error: Path does not exist or is not a directory: {source_dir}")
+            return
+        
+        print(f"Using source directory: {source_dir}")
+    
+    # Change working directory to source_dir if it's different from current
+    original_dir = os.getcwd()
+    if source_dir != '.':
+        try:
+            os.chdir(source_dir)
+            print(f"Changed working directory to: {os.getcwd()}")
+        except Exception as e:
+            print(f"Error changing directory: {str(e)}")
+            return
     
     # Get current directory name as default folder name
     current_dir = os.path.basename(os.path.abspath('.'))
@@ -460,19 +503,25 @@ def main():
     # =============== RUN UPLOAD ===============
     
     # Run the upload with all settings
-    asyncio.run(upload_files(
+    upload_result = asyncio.run(upload_files(
         s3_folder=folder,
         extensions=extensions,
         rename_prefix=rename_prefix,
         rename_mode=rename_mode,
         only_first=only_first,
         max_concurrent=concurrent,
-        source_dir=source_dir,
+        source_dir=source_dir if source_dir == '.' else os.path.abspath(source_dir),  # Use absolute path if not current dir
         specific_files=optimized_files,
         include_existing=include_existing,
         output_format=selected_format,
         subfolder_mode=subfolder_mode
     ))
+    
+    # Important: Change back to original directory if we changed it
+    if source_dir != '.':
+        os.chdir(original_dir)
+        
+    return upload_result
 
 if __name__ == "__main__":
     main()
