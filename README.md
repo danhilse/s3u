@@ -20,6 +20,7 @@ An interactive command-line tool for optimizing images, uploading files (includi
 - Limit file counts for downloads and browsing
 - Persistent configuration system with arrow key selection
 - Multiple output formats (JSON, XML, HTML, CSV)
+- Flexible subfolder handling (ignore, pool files, or preserve structure)
 
 ## Requirements
 
@@ -76,6 +77,12 @@ s3u -d mj_watercolors -o ./downloaded_images
 
 # Download 10 files to a specific directory
 s3u -d mj_watercolors 10 -o ./downloaded_images
+
+# Specify how to handle subfolders
+s3u -sf preserve
+
+# Download files recursively including subfolders
+s3u -d mj_watercolors -sf preserve
 ```
 
 ### Configuration System
@@ -123,6 +130,7 @@ Simply navigate to your preferred option using arrow keys and press Enter to sel
 | optimize | Default image optimization setting | auto, always, never | auto |
 | size | Default optimization size | optimized, small, tiny | optimized |
 | rename_mode | How to apply rename prefix to filenames | replace, prepend, append | replace |
+| subfolder_mode | How to handle subfolders when uploading | ignore, pool, preserve | ignore |
 
 #### Output Formats
 
@@ -153,6 +161,7 @@ The system offers three different ways to apply a rename prefix to your files:
 7. **Rename mode** - Choose how to apply the rename prefix (replace, prepend, or append)
 8. **Output format** - Choose between output formats for clipboard
 9. **Concurrency** - Optionally enable concurrent uploads for speed
+10. **Subfolder handling** - Choose how to handle subfolders in the upload directory
 
 ## Folder Management
 
@@ -166,6 +175,36 @@ Include existing files in CDN links? (y/n) [y]:
 
 - Answer "y" (default) to include all files (existing + new) in the clipboard output
 - Answer "n" to include only the newly uploaded files in the clipboard output
+
+### Subfolder Handling
+
+When the tool detects subfolders in your upload directory, you'll be prompted:
+```
+Detected 3 subfolders in the current directory:
+  1. images/products
+  2. images/banners
+  3. backup
+  ... and 2 more
+  
+How to handle subfolders? (1=ignore, 2=pool all files, 3=preserve structure) [1]: 
+```
+
+The three subfolder handling modes work as follows:
+
+- **Ignore (default)**: Only files in the main directory are uploaded
+- **Pool**: Files from all subfolders are combined and uploaded to the main S3 folder
+- **Preserve**: The subfolder structure is preserved in S3, creating matching subfolders
+
+You can specify the subfolder mode via command line with the `-sf` or `--subfolder-mode` flag:
+```bash
+# Upload preserving subfolder structure
+s3u -sf preserve
+
+# Pool all files from subfolders
+s3u -sf pool
+```
+
+When using the "preserve" mode with existing folders, the `-b` flag will recursively list all files in the folder and subfolders.
 
 ### Tab Completion for Folders
 
@@ -216,7 +255,8 @@ Example configuration file:
     "concurrent": 10,
     "optimize": "auto",
     "size": "optimized",
-    "rename_mode": "replace"
+    "rename_mode": "replace",
+    "subfolder_mode": "ignore"
 }
 ```
 

@@ -277,7 +277,7 @@ def rename_files(directory, extensions, rename_prefix=None, rename_mode='replace
 
 async def upload_files(s3_folder, extensions=None, rename_prefix=None, rename_mode='replace',
                       only_first=False, max_concurrent=10, source_dir='.', specific_files=None, 
-                      include_existing=True, output_format='array'):
+                      include_existing=True, output_format='array', subfolder_mode='ignore'):
     """
     Upload files from the specified directory to S3.
     
@@ -292,6 +292,7 @@ async def upload_files(s3_folder, extensions=None, rename_prefix=None, rename_mo
         specific_files (list): Optional list of specific files to upload
         include_existing (bool): Whether to include existing files in the CDN links
         output_format (str): Format for output: 'array', 'json', 'xml', 'html', or 'csv'
+        subfolder_mode (str): How to handle subfolders: 'ignore', 'pool', or 'preserve'
     
     Returns:
         list: List of CloudFront URLs for uploaded files
@@ -301,8 +302,60 @@ async def upload_files(s3_folder, extensions=None, rename_prefix=None, rename_mo
     # Ensure S3 folder exists
     await ensure_s3_folder_exists(session, s3_folder)
     
-    # Rename files
-    renamed_files, original_to_new = rename_files(source_dir, extensions, rename_prefix, rename_mode, specific_files)
+    # Handle files based on subfolder mode
+    if subfolder_mode == 'ignore' or specific_files:
+        # Use the existing logic for specific_files or just the main directory
+        renamed_files, original_to_new = rename_files(source_dir, extensions, rename_prefix, rename_mode, specific_files)
+    else:
+        # We need to handle subfolders
+        all_files = []
+        
+        if subfolder_mode == 'pool':
+            # Pool all files from subfolders into one list
+            for root, _, files in os.walk(source_dir):
+                for file in files:
+                    if should_process_file(file, extensions):
+                        all_files.append(os.path.join(root, file))
+            
+            # Rename all files together
+            renamed_files, original_to_new = rename_files(
+                source_dir, 
+                extensions, 
+                rename_prefix, 
+                rename_mode, 
+                specific_files=all_files
+            )
+        elif subfolder_mode == 'preserve':
+            # Preserve the subfolder structure
+            renamed_files = []
+            original_to_new = {}
+            
+            for root, _, files in os.walk(source_dir):
+                subfolder_files = [os.path.join(root, f) for f in files if should_process_file(f, extensions)]
+                
+                if subfolder_files:
+                    # Get relative path for the subfolder
+                    rel_path = os.path.relpath(root, source_dir)
+                    
+                    # Skip the main directory
+                    if rel_path == '.':
+                        subfolder_renamed, subfolder_map = rename_files(
+                            root, 
+                            extensions, 
+                            rename_prefix, 
+                            rename_mode
+                        )
+                    else:
+                        # For subfolders, use the subfolder path for uploads
+                        subfolder_renamed, subfolder_map = rename_files(
+                            root, 
+                            extensions, 
+                            rename_prefix, 
+                            rename_mode
+                        )
+                    
+                    renamed_files.extend(subfolder_renamed)
+                    original_to_new.update(subfolder_map)
     
     if not renamed_files:
         print("No files to upload.")
@@ -313,10 +366,29 @@ async def upload_files(s3_folder, extensions=None, rename_prefix=None, rename_mo
     
     async def upload_with_semaphore(file):
         async with semaphore:
-            return await upload_file(session, file, s3_folder)
+            # Determine the S3 subfolder based on the file's location
+            if subfolder_mode == 'preserve' and not specific_files:
+                rel_path = os.path.relpath(os.path.dirname(file), source_dir)
+                
+                if rel_path == '.':
+                    # File is in the main directory
+                    target_folder = s3_folder
+                else:
+                    # File is in a subfolder
+                    target_folder = f"{s3_folder}/{rel_path}"
+                    # Ensure the subfolder exists in S3
+                    await ensure_s3_folder_exists(session, target_folder)
+            else:
+                # For 'ignore' or 'pool' modes, use the main folder
+                target_folder = s3_folder
+            
+            return await upload_file(session, file, target_folder)
     
     # Create tasks for all file uploads
     tasks = [upload_with_semaphore(file) for file in renamed_files]
+    
+    # Rest of the function remains the same...
+    # (existing upload logic)
     
     # Progress tracking
     total_files = len(tasks)
@@ -340,13 +412,13 @@ async def upload_files(s3_folder, extensions=None, rename_prefix=None, rename_mo
     if include_existing:
         print("Including existing files in the CDN links...")
         if output_format == 'array':
-            existing_urls = await list_s3_folder_objects(s3_folder, return_urls_only=True)
+            existing_urls = await list_s3_folder_objects(s3_folder, return_urls_only=True, recursive=(subfolder_mode == 'preserve'))
             # Merge the lists, ensuring no duplicates by converting to a set first
             all_urls = list(set(uploaded_urls + existing_urls))
             print(f"Total of {len(all_urls)} files in folder (new + existing)")
             all_objects = []  # We don't need objects for array format
         else:
-            existing_objects = await list_s3_folder_objects(s3_folder, return_urls_only=False, output_format='json')
+            existing_objects = await list_s3_folder_objects(s3_folder, return_urls_only=False, output_format='json', recursive=(subfolder_mode == 'preserve'))
             
             # Create a set of uploaded URLs for faster lookup
             uploaded_url_set = set(uploaded_urls)

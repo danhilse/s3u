@@ -22,12 +22,18 @@ CONFIG_FILE = os.path.join(CONFIG_DIR, 'config.json')
 
 # Default configuration settings
 DEFAULT_CONFIG = {
+    "format": "array",
+    "concurrent": 5,
+    "optimize": "auto",
+    "size": "optimized",
+    "rename_mode": "replace",
     "image_format": "webp",     # Default image format (webp, jpg, avif)
     "video_format": "mp4",      # Default video format (mp4, webm)
     "optimize_videos": "no",    # Whether to transcode videos
     "video_preset": "medium",   # Video encoding preset
     "max_workers": 4,           # Maximum number of concurrent optimization workers
-    "remove_audio": "no"        # Whether to remove audio from videos (for pATCHES mode)
+    "remove_audio": "no",       # Whether to remove audio from videos (for pATCHES mode)
+    "subfolder_mode": "ignore"  # How to handle subfolders when uploading
 }
 
 # Configuration options and their allowed values
@@ -86,7 +92,12 @@ CONFIG_OPTIONS = {
         "description": "Maximum number of parallel optimization workers",
         "values": list(range(1, 17)),  # 1-16 workers
         "default": 4
-    }
+    },
+    "subfolder_mode": {
+    "description": "How to handle subfolders when uploading",
+    "values": ["ignore", "pool", "preserve"],
+    "default": "ignore"
+},
 }
 
 def ensure_config_dir():

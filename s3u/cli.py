@@ -101,6 +101,24 @@ def parse_extensions(extensions_input):
         return [ext.strip() for ext in extensions_input.split(',') if ext.strip()]
     else:
         return [ext.strip() for ext in extensions_input.split() if ext.strip()]
+def scan_for_subfolders(directory):
+    """
+    Scan for subfolders in the given directory.
+    
+    Args:
+        directory (str): The directory to scan
+        
+    Returns:
+        list: List of subfolders found (relative paths)
+    """
+    subfolders = []
+    for root, dirs, files in os.walk(directory):
+        if root != directory:  # Skip the main directory
+            # Get relative path
+            relpath = os.path.relpath(root, directory)
+            subfolders.append(relpath)
+    
+    return subfolders
 
 def main():
     # Load configuration
@@ -116,13 +134,14 @@ def main():
     parser.add_argument("-config", nargs="*", metavar="OPTION [VALUE]", help="Configure persistent settings (use without args to show all options)")
     parser.add_argument("count", nargs="?", type=int, help="Optional number of files to process (for -b or -d)")
     parser.add_argument("-f", "--first", action="store_true", help="Copy only the first URL to clipboard")
+    parser.add_argument("-sf", "--subfolder-mode", choices=["ignore", "pool", "preserve"], 
+                        help="How to handle subfolders: ignore, pool, or preserve")
     args = parser.parse_args()
     
     
     if args.first:
         only_first = True
 
-    
     # Handle special commands first (config, list, browse, download)
     # (same as before, no changes needed)
     
@@ -141,6 +160,48 @@ def main():
     if extensions:
         video_extensions = ['mp4', 'mov']
         only_videos = all(ext.lower() in video_extensions for ext in extensions)
+    
+    # Check for subfolders
+    subfolders = scan_for_subfolders('.')
+    has_subfolders = len(subfolders) > 0
+    
+    # Determine subfolder mode
+    if args.subfolder_mode:
+        # Use command line argument if provided
+        subfolder_mode = args.subfolder_mode
+        if has_subfolders:
+            print(f"Using subfolder mode '{subfolder_mode}' from command line")
+    elif has_subfolders:
+        # If subfolders are found, ask how to handle them
+        print(f"\nDetected {len(subfolders)} subfolders in the current directory:")
+        for i, subfolder in enumerate(subfolders[:5], 1):  # Show first 5 only
+            print(f"  {i}. {subfolder}")
+        if len(subfolders) > 5:
+            print(f"  ... and {len(subfolders) - 5} more")
+        
+        # Use config setting as default
+        subfolder_mode_config = config.get('subfolder_mode', 'ignore')
+        
+        subfolder_options = {
+            '1': 'ignore',   # Ignore subfolders
+            '2': 'pool',     # Combine all files
+            '3': 'preserve'  # Preserve structure
+        }
+        
+        # Map config to option number
+        default_option = '1'  # Default to ignore
+        for opt, mode in subfolder_options.items():
+            if mode == subfolder_mode_config:
+                default_option = opt
+                
+        mode_prompt = "How to handle subfolders? (1=ignore, 2=pool all files, 3=preserve structure)"
+        mode_choice = get_input(mode_prompt, default_option)
+        subfolder_mode = subfolder_options.get(mode_choice, subfolder_mode_config)
+        
+        print(f"Subfolder mode: {subfolder_mode}")
+    else:
+        # Use the default from config
+        subfolder_mode = config.get('subfolder_mode', 'ignore')
     
     # =============== OPTIMIZATION SETTINGS COLLECTION ===============
     # Collect optimization settings but DON'T run optimization yet
@@ -337,7 +398,9 @@ def main():
     # Confirm settings
     print("\nUpload Settings:")
     print(f"  Extensions: {extensions if extensions else 'All files'}")
-    
+    if has_subfolders:
+        print(f"  Subfolder handling: {subfolder_mode}")
+        
     # Display optimization settings
     if optimize:
         print(f"  Media optimization: {optimize_size}")
@@ -407,7 +470,8 @@ def main():
         source_dir=source_dir,
         specific_files=optimized_files,
         include_existing=include_existing,
-        output_format=selected_format
+        output_format=selected_format,
+        subfolder_mode=subfolder_mode
     ))
 
 if __name__ == "__main__":
