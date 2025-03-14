@@ -1,0 +1,10 @@
+Metadata-Version: 2.1
+Name: s3u
+Version: 0.1.0
+Summary: A tool for uploading files to S3 with automatic renaming and CloudFront URL generation
+Author: Your Name
+Author-email: your.email@example.com
+Keywords: aws,s3,upload,cloudfront
+Requires-Python: >=3.7
+Requires-Dist: aioboto3
+Requires-Dist: pyperclip
