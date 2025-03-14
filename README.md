@@ -10,7 +10,7 @@ An interactive command-line tool for optimizing images, uploading files (includi
 - Video file support (MP4, MOV)
 - Filter files by extension
 - Batch upload to S3 with async/concurrent uploads
-- Automatic file renaming
+- Flexible file renaming (replace, prepend, append modes)
 - CloudFront URL generation
 - Clipboard integration for easy URL sharing
 - Browse existing S3 folders and get CDN links
@@ -122,6 +122,7 @@ Simply navigate to your preferred option using arrow keys and press Enter to sel
 | concurrent | Default number of concurrent uploads | 1-20 | 5 |
 | optimize | Default image optimization setting | auto, always, never | auto |
 | size | Default optimization size | optimized, small, tiny | optimized |
+| rename_mode | How to apply rename prefix to filenames | replace, prepend, append | replace |
 
 #### Output Formats
 
@@ -133,6 +134,14 @@ The configuration system introduces multiple output formats for the URLs and met
 - **html**: HTML document with clickable links
 - **csv**: CSV file format with URL and metadata columns
 
+#### Renaming Modes
+
+The system offers three different ways to apply a rename prefix to your files:
+
+- **replace**: Original filenames are replaced completely with the pattern `prefix_index` (e.g., `vacation_001.jpg`)
+- **prepend**: The prefix is added before the original filename with the pattern `prefix_originalname` (e.g., `vacation_beach.jpg`)
+- **append**: The prefix is added after the original filename with the pattern `originalname_prefix` (e.g., `beach_vacation.jpg`)
+
 ### Interactive Options
 
 1. **File extensions** - Specify which file types to include (e.g., "jpg png mp4 mov" or "jpg,png,mp4,mov")
@@ -141,8 +150,9 @@ The configuration system introduces multiple output formats for the URLs and met
 4. **S3 folder** - Specify the destination folder in your S3 bucket (press Tab for autocompletion)
 5. **Existing folder handling** - Choose whether to include existing files in CDN links (if folder exists)
 6. **Rename prefix** - Optionally rename files with a common prefix
-7. **Output format** - Choose between output formats for clipboard
-8. **Concurrency** - Optionally enable concurrent uploads for speed
+7. **Rename mode** - Choose how to apply the rename prefix (replace, prepend, or append)
+8. **Output format** - Choose between output formats for clipboard
+9. **Concurrency** - Optionally enable concurrent uploads for speed
 
 ## Folder Management
 
@@ -205,7 +215,8 @@ Example configuration file:
     "format": "json",
     "concurrent": 10,
     "optimize": "auto",
-    "size": "optimized"
+    "size": "optimized",
+    "rename_mode": "replace"
 }
 ```
 

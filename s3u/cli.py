@@ -257,6 +257,28 @@ def main():
     # Get rename prefix
     rename_prefix = get_input("Rename prefix (optional, press Enter to skip)")
     
+    # Get rename mode if a prefix is specified
+    rename_mode = config.get('rename_mode', 'replace')  # Get default from config
+    
+    if rename_prefix:
+        mode_options = {
+            '1': 'replace',  # Replace filename with prefix_index
+            '2': 'prepend',  # Prepend the prefix to filename (prefix_filename)
+            '3': 'append',   # Append the prefix to filename (filename_prefix)
+        }
+        
+        # Find default option based on config
+        default_option = '1'  # Default to replace
+        for opt, mode in mode_options.items():
+            if mode == rename_mode:
+                default_option = opt
+                
+        mode_prompt = "Rename mode (1=replace [prefix_index], 2=prepend [prefix_filename], 3=append [filename_prefix])"
+        mode_choice = get_input(mode_prompt, default_option)
+        selected_mode = mode_options.get(mode_choice, rename_mode)
+    else:
+        selected_mode = rename_mode  # Use config default, but it won't be used anyway
+    
     # Get output format from config
     default_format = config.get('format', 'array')
     format_options = {
@@ -298,7 +320,11 @@ def main():
     print(f"  S3 Folder: {folder}")
     if folder_exists:
         print(f"  Include Existing Files: {'Yes' if include_existing else 'No'}")
-    print(f"  Rename Prefix: {rename_prefix if rename_prefix else 'No renaming'}")
+    if rename_prefix:
+        print(f"  Rename Prefix: {rename_prefix}")
+        print(f"  Rename Mode: {selected_mode}")
+    else:
+        print("  No renaming")
     print(f"  Output Format: {selected_format.capitalize()}")
     print(f"  Concurrent Uploads: {concurrent}")
     
@@ -312,6 +338,7 @@ def main():
         s3_folder=folder,
         extensions=extensions,
         rename_prefix=rename_prefix,
+        rename_mode=selected_mode,
         only_first=only_first,
         max_concurrent=concurrent,
         source_dir=source_dir,

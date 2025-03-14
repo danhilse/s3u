@@ -22,10 +22,11 @@ CONFIG_FILE = os.path.join(CONFIG_DIR, 'config.json')
 
 # Default configuration settings
 DEFAULT_CONFIG = {
-    "format": "array",  # Output format: array, json, xml, html
-    "concurrent": 5,    # Default concurrent uploads
-    "optimize": "auto", # Default image optimization: auto, always, never
-    "size": "optimized", # Default optimization size: optimized, small, tiny
+    "format": "array",     # Output format: array, json, xml, html
+    "concurrent": 5,       # Default concurrent uploads
+    "optimize": "auto",    # Default image optimization: auto, always, never
+    "size": "optimized",   # Default optimization size: optimized, small, tiny
+    "rename_mode": "replace"  # Default rename mode: replace, prepend, append
 }
 
 # Configuration options and their allowed values
@@ -49,6 +50,11 @@ CONFIG_OPTIONS = {
         "description": "Default optimization size",
         "values": ["optimized", "small", "tiny"],
         "default": "optimized"
+    },
+    "rename_mode": {
+        "description": "How to apply the rename prefix to filenames",
+        "values": ["replace", "prepend", "append"],
+        "default": "replace"
     }
 }
 

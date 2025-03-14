@@ -51,7 +51,7 @@ def should_process_file(filename, extensions):
     
     return False
 
-def rename_files(directory, extensions, rename_prefix=None, specific_files=None):
+def rename_files(directory, extensions, rename_prefix=None, rename_mode='replace', specific_files=None):
     """
     Rename files with a common prefix and sequential numbering.
     
@@ -59,6 +59,7 @@ def rename_files(directory, extensions, rename_prefix=None, specific_files=None)
         directory (str): The directory containing files
         extensions (list): List of extensions to include
         rename_prefix (str): Optional prefix for renamed files
+        rename_mode (str): Rename mode - 'replace', 'prepend', or 'append'
         specific_files (list): Optional list of specific files to rename
         
     Returns:
@@ -104,7 +105,18 @@ def rename_files(directory, extensions, rename_prefix=None, specific_files=None)
         for i, (filename, filepath) in enumerate(zip(files, file_paths), start=1):
             name, ext = os.path.splitext(filename)
             index_str = format_str.format(i)
-            new_name = f"{rename_prefix}_{index_str}{ext}"
+            
+            # Apply the rename based on the mode
+            if rename_mode == 'replace':
+                new_name = f"{rename_prefix}_{index_str}{ext}"
+            elif rename_mode == 'prepend':
+                new_name = f"{rename_prefix}_{name}{ext}"
+            elif rename_mode == 'append':
+                new_name = f"{name}_{rename_prefix}{ext}"
+            else:
+                # Default to replace mode if invalid mode is specified
+                new_name = f"{rename_prefix}_{index_str}{ext}"
+            
             new_path = os.path.join(directory, new_name)
             os.rename(filepath, new_path)
             renamed_files.append(new_path)
@@ -119,51 +131,106 @@ def rename_files(directory, extensions, rename_prefix=None, specific_files=None)
     
     return renamed_files, original_to_new
 
-async def upload_file(session, local_file, s3_folder):
+async def upload_files(s3_folder, extensions=None, rename_prefix=None, rename_mode='replace',
+                      only_first=False, max_concurrent=10, source_dir='.', specific_files=None, 
+                      include_existing=True, output_format='array'):
     """
-    Upload a single file to S3.
+    Upload files from the specified directory to S3.
     
     Args:
-        session: The aioboto3 session
-        local_file (str): Path to the local file
-        s3_folder (str): S3 folder to upload to
-        
-    Returns:
-        tuple: (success, metadata)
-    """
-    s3_path = f"{s3_folder}/{os.path.basename(local_file)}" if s3_folder else os.path.basename(local_file)
+        s3_folder (str): The folder name in the S3 bucket to upload to
+        extensions (list): File extensions to include (e.g., ['jpg', 'png'])
+        rename_prefix (str): Prefix for renaming files before upload
+        rename_mode (str): How to apply the rename prefix ('replace', 'prepend', 'append')
+        only_first (bool): Only copy the first URL to clipboard
+        max_concurrent (int): Maximum concurrent uploads
+        source_dir (str): Directory containing files to upload
+        specific_files (list): Optional list of specific files to upload
+        include_existing (bool): Whether to include existing files in the CDN links
+        output_format (str): Format for output: 'array', 'json', 'xml', 'html', or 'csv'
     
-    async with session.client('s3') as s3:
-        try:
-            await s3.upload_file(local_file, BUCKET_NAME, s3_path)
-            url = f"{CLOUDFRONT_URL}/{s3_path}"
-            print(f"Uploaded: {local_file} -> {url}")
+    Returns:
+        list: List of CloudFront URLs for uploaded files
+    """
+    session = get_s3_session()
+    
+    # Ensure S3 folder exists
+    await ensure_s3_folder_exists(session, s3_folder)
+    
+    # Rename files
+    renamed_files, original_to_new = rename_files(source_dir, extensions, rename_prefix, rename_mode, specific_files)
+    
+    if not renamed_files:
+        print("No files to upload.")
+        return []
+    
+    # Create a semaphore to limit concurrent uploads
+    semaphore = asyncio.Semaphore(max_concurrent)
+    
+    async def upload_with_semaphore(file):
+        async with semaphore:
+            return await upload_file(session, file, s3_folder)
+    
+    # Create tasks for all file uploads
+    tasks = [upload_with_semaphore(file) for file in renamed_files]
+    
+    # Progress tracking
+    total_files = len(tasks)
+    print(f"Starting upload of {total_files} files...")
+    
+    # Wait for all uploads to complete
+    results = await asyncio.gather(*tasks)
+    
+    # Extract successful upload URLs and metadata
+    uploaded_urls = []
+    uploaded_objects = []
+    
+    for success, data in results:
+        if success and data:
+            uploaded_urls.append(data['url'])
+            uploaded_objects.append(data)
+    
+    print(f"\nCompleted {len(uploaded_urls)} of {total_files} uploads")
+    
+    # Get existing files if needed
+    if include_existing:
+        print("Including existing files in the CDN links...")
+        if output_format == 'array':
+            existing_urls = await list_s3_folder_objects(s3_folder, return_urls_only=True)
+            # Merge the lists, ensuring no duplicates by converting to a set first
+            all_urls = list(set(uploaded_urls + existing_urls))
+            print(f"Total of {len(all_urls)} files in folder (new + existing)")
+            all_objects = []  # We don't need objects for array format
+        else:
+            existing_objects = await list_s3_folder_objects(s3_folder, return_urls_only=False, output_format='json')
             
-            # Get file size
-            file_size = os.path.getsize(local_file)
+            # Create a set of uploaded URLs for faster lookup
+            uploaded_url_set = set(uploaded_urls)
             
-            # Get file extension
-            _, file_ext = os.path.splitext(local_file)
-            file_ext = file_ext.lstrip('.').lower()
+            # Filter existing objects to avoid duplicates
+            filtered_existing = [obj for obj in existing_objects if obj['url'] not in uploaded_url_set]
             
-            # Return both the URL and metadata
-            return True, {
-                'url': url,
-                'filename': os.path.basename(local_file),
-                's3_path': s3_path,
-                'size': file_size,
-                'type': file_ext,
-                'uploaded_at': datetime.now().isoformat()
-            }
-        except FileNotFoundError:
-            print(f"The file {local_file} was not found")
-            return False, None
-        except NoCredentialsError:
-            print("Credentials not available")
-            return False, None
-        except Exception as e:
-            print(f"Error uploading {local_file}: {str(e)}")
-            return False, None
+            # Merge the lists
+            all_objects = uploaded_objects + filtered_existing
+            all_urls = [obj['url'] for obj in all_objects]
+            
+            print(f"Total of {len(all_urls)} files in folder (new + existing)")
+    else:
+        all_urls = uploaded_urls
+        all_objects = uploaded_objects
+        print(f"Including only newly uploaded files ({len(all_urls)})")
+    
+    # Copy to clipboard
+    if all_urls:
+        if only_first and output_format == 'array':
+            pyperclip.copy(all_urls[0])
+            print(f"\nCopied first URL to clipboard: {all_urls[0]}")
+        else:
+            clipboard_content = format_output(all_urls, all_objects, output_format)
+            pyperclip.copy(clipboard_content)
+            print(f"\nCopied {output_format} format data to clipboard")
+    
+    return all_urls
 
 async def upload_files(s3_folder, extensions=None, rename_prefix=None, only_first=False, 
                        max_concurrent=10, source_dir='.', specific_files=None, 
