@@ -41,10 +41,10 @@ jobs:
           bun-version: latest
 
       - name: "Install Dependencies"
-        run: bun install
+        run: cd site && bun install
 
       - name: "Build"
-        run: bun run build
+        run: cd site && bun run build
 
       - name: "Setup Pages"
         uses: actions/configure-pages@main
@@ -52,7 +52,7 @@ jobs:
       - name: "Upload Build Artifact"
         uses: actions/upload-pages-artifact@main
         with:
-          path: .site/docs/dist
+          path: site/docs/dist
 
       - name: "Deploy to GitHub Pages"
         id: deployment
