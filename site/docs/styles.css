@@ -1,4 +1,4 @@
-/* Custom styling for S3U documentation */
+/* Enhanced styling for S3U documentation */
 @import "tailwindcss";
 
 :root {
@@ -7,173 +7,63 @@
   --aws-light-blue: #1A73E8;
   --aws-light-gray: #f4f4f4;
   --aws-dark-gray: #444;
+  --wave-color: var(--aws-light-gray);
+  --wave-color-alt: white;
 }
 
 :root.dark {
   --vocs-color-background: #121212;
   --aws-light-gray: #2a2a2a;
   --aws-dark-gray: #aaa;
+  --wave-color: #1a1a1a;
+  --wave-color-alt: #121212;
 }
 
+/* Typography enhancements */
 .Vocs_H1 {
   color: var(--aws-orange);
   margin-bottom: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
 }
 
 .Vocs_H2 {
-  border-bottom: 1px solid var(--aws-orange);
-  padding-bottom: 0.5rem;
   margin-top: 2rem;
   margin-bottom: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.025em;
 }
 
 .Vocs_CodeBlock {
   border-left: 4px solid var(--aws-orange);
+  border-radius: 0.5rem;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .Vocs_Button--accent {
   background-color: var(--aws-orange);
+  transition: all 0.3s ease;
 }
 
 .Vocs_Button--accent:hover {
   background-color: #e68a00;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 153, 0, 0.3);
 }
 
-/* ----- SIDEBAR STYLING ----- */
+/* ----- LANDING PAGE ENHANCED STYLES ----- */
 
-/* Main section titles */
-.vocs_Sidebar_sectionTitle {
-  font-weight: 700 !important;
-  transition: all 0.2s ease !important;
-  position: relative !important;
-}
-
-/* Prevent clicking on section title from collapsing (JS override) */
-.vocs_Sidebar_sectionTitle::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 10;
-  pointer-events: none;
-}
-
-
-
-/* Fallback for browsers that don't support :has */
-.vocs_Sidebar_sectionHeader[data-expanded="true"]::before {
-  transform: rotate(90deg) !important;
-}
-
-
-
-/* Active/hover main section */
-.vocs_Sidebar_sectionTitle[data-active="true"],
-.vocs_Sidebar_sectionTitle:hover {
-  color: var(--aws-orange) !important;
-}
-
-/* Section spacing */
-.vocs_Sidebar_section {
-  margin-bottom: 8px !important;
-  padding-bottom: 8px !important;
-  border-bottom: 1px solid var(--aws-light-gray) !important;
-}
-
-.vocs_Sidebar_section:last-child {
-  border-bottom: none !important;
-}
-
-/* Items container (for sub-items) */
-.vocs_Sidebar_items {
-  padding-left: 20px !important;
-  margin-bottom: 12px !important;
-}
-
-/* Better table styling */
-table {
-  width: 100%;
-  margin: 1.5rem 0;
-  border-collapse: collapse;
-}
-
-table th {
-  background-color: var(--aws-blue);
-  color: white;
-  padding: 0.75rem;
-  text-align: left;
-}
-
-table td {
-  padding: 0.75rem;
-  border-bottom: 1px solid var(--aws-light-gray);
-}
-
-table tr:nth-child(even) {
-  background-color: var(--aws-light-gray);
-}
-
-/* To help with click targeting, use JavaScript to add this functionality */
-/* This adds a button to toggle the sidebar section */
-/* This won't work with just CSS, but we'll include it to remind us of the change needed */
-.vocs_Sidebar_sectionHeader {
-  cursor: default !important;
-}
-
-/* Add this script to the page to modify the click behavior */
-/* Since we can't add JavaScript with CSS, this is just a reminder */
-/* 
-document.addEventListener('DOMContentLoaded', function() {
-  // Find all section headers
-  const sectionHeaders = document.querySelectorAll('.vocs_Sidebar_sectionHeader');
-  
-  // For each header
-  sectionHeaders.forEach(header => {
-    // Create a new click handler
-    header.addEventListener('click', function(e) {
-      // If the click is on the chevron (first 24px) 
-      if (e.offsetX < 24) {
-        // Let the click through to toggle
-      } else {
-        // Prevent the default toggle behavior
-        e.stopPropagation();
-        
-        // Find the section title link and click it instead
-        const titleLink = header.querySelector('.vocs_Sidebar_sectionTitle');
-        if (titleLink) {
-          titleLink.click();
-        }
-      }
-    });
-  });
-});
-*/
-
-/* Landing page custom styles - add to your styles.css */
-
-/* Hero section */
+/* Hero section with animations */
 .landing-hero {
   background: linear-gradient(135deg, var(--aws-blue) 0%, #0a192f 100%);
   color: white;
-  padding: 4rem 0;
+  padding: 6rem 0 0;
   overflow: hidden;
   position: relative;
 }
 
-.landing-hero::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-image: url('/s3-pattern.svg');
-  background-size: cover;
-  opacity: 0.05;
-  z-index: 0;
-}
+
 
 .hero-content {
   position: relative;
@@ -183,17 +73,36 @@ document.addEventListener('DOMContentLoaded', function() {
   padding: 0 2rem;
 }
 
-.hero-logo {
-  margin-bottom: 2rem;
+.hero-content a {
+  text-decoration: none;
+  transition: all 0.3s ease;
 }
 
-/* Terminal window styles */
+.hero-wave {
+  position: relative;
+  height: 120px;
+  width: 100%;
+  margin-top: -1px;
+}
+
+.wave-divider {
+  position: relative;
+  height: 120px;
+  width: 100%;
+  margin: -1px 0;
+}
+
+/* Terminal window enhanced styles */
+.terminal-container {
+  padding: 2rem 1rem;
+}
+
 .terminal-preview {
   background: #1a1a1a;
   border-radius: 8px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  margin: 3rem auto;
-  max-width: 800px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  margin: 2rem auto;
+  max-width: 650px;
   overflow: hidden;
   font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
   font-size: 14px;
@@ -202,9 +111,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .terminal-header {
   background: #333;
-  padding: 10px;
+  padding: 10px 14px;
   display: flex;
   align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .terminal-button {
@@ -212,15 +122,6 @@ document.addEventListener('DOMContentLoaded', function() {
   height: 12px;
   border-radius: 50%;
   margin-right: 8px;
-  background: #ff5f56;
-}
-
-.terminal-button:nth-child(2) {
-  background: #ffbd2e;
-}
-
-.terminal-button:nth-child(3) {
-  background: #27c93f;
 }
 
 .terminal-body {
@@ -236,6 +137,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .terminal-prompt {
   color: #63c8ff;
+  display: inline-block;
+  margin-right: 10px;
 }
 
 .terminal-response {
@@ -244,6 +147,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .terminal-status {
   color: #c586c0;
+  display: inline-block;
 }
 
 .terminal-progress {
@@ -257,16 +161,71 @@ document.addEventListener('DOMContentLoaded', function() {
 .terminal-url {
   color: #ce9178;
   font-size: 13px;
+  display: inline-block;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.3);
+  padding-bottom: 2px;
 }
 
-/* Features section */
+/* Animation styles */
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.animate-rise {
+  animation: rise 1s ease-out forwards;
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+@keyframes rise {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-typing::after {
+  content: '|';
+  display: inline-block;
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.animate-progress span {
+  display: inline-block;
+  animation: progressBar 2s ease-in-out;
+}
+
+@keyframes progressBar {
+  0% { width: 0%; }
+  20% { width: 20%; }
+  40% { width: 40%; }
+  60% { width: 60%; }
+  80% { width: 80%; }
+  100% { width: 100%; }
+}
+
+/* Features section enhanced */
 .features-section {
   padding: 5rem 0;
   background-color: var(--aws-light-gray);
-}
-
-:root.dark .features-section {
-  background-color: #1a1a1a;
+  position: relative;
 }
 
 .container {
@@ -275,88 +234,104 @@ document.addEventListener('DOMContentLoaded', function() {
   padding: 0 2rem;
 }
 
-.features-heading, .code-heading {
+.features-heading, .code-heading, .docs-heading {
   text-align: center;
   margin-bottom: 3rem;
   color: var(--aws-orange);
   font-size: 2.5rem;
+  font-weight: 700;
+  position: relative;
+  display: inline-block;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .features-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 2.5rem;
 }
 
 .feature-card {
   background: white;
   border-radius: 8px;
   padding: 2rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s, box-shadow 0.3s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 :root.dark .feature-card {
   background: #222;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .feature-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
-}
-
-.feature-icon {
-  font-size: 2.5rem;
-  margin-bottom: 1rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
 .feature-card h3 {
   color: var(--aws-orange);
   margin-bottom: 1rem;
+  font-weight: 600;
 }
 
 .feature-card p {
   color: var(--aws-dark-gray);
   line-height: 1.6;
+  flex-grow: 1;
 }
 
-/* Code examples section */
+/* Code examples section enhanced */
 .code-examples-section {
   padding: 5rem 0;
   background-color: white;
+  position: relative;
 }
 
 :root.dark .code-examples-section {
-  background-color: #111;
+  background-color: #121212;
 }
 
 .code-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 2rem;
 }
 
 .code-card {
-  background: var(--aws-light-gray);
-  border-radius: 8px;
+  background: #1a1a1a;
+  border-radius: 6px;
   overflow: hidden;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.2s ease;
+  height: 100%;
 }
 
 :root.dark .code-card {
-  background: #222;
+  background: #1a1a1a;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.code-card:hover {
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
 }
 
 .code-card h3 {
-  padding: 1rem;
+  padding: 0.75rem 1rem;
   margin: 0;
-  background: var(--aws-blue);
+  background: #333;
   color: white;
-  font-size: 1.1rem;
+  font-size: 1rem;
+  font-weight: 500;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .code-block {
-  padding: 1.5rem;
+  padding: 1.25rem;
 }
 
 .code-block pre {
@@ -365,69 +340,158 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 .code-block code {
-  color: var(--aws-dark-gray);
-  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
-}
-
-:root.dark .code-block code {
   color: #e0e0e0;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 0.9rem;
+  line-height: 1.5;
 }
 
-/* Call-to-action section */
+/* Documentation section enhanced */
+.docs-section {
+  padding: 5rem 0;
+  background-color: var(--aws-light-gray);
+  position: relative;
+}
+
+:root.dark .docs-section {
+  background-color: #1a1a1a;
+}
+
+.docs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2.5rem;
+}
+
+.docs-card {
+  background: white;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+:root.dark .docs-card {
+  background: #222;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.docs-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+
+.docs-icon-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: var(--aws-blue);
+  border-radius: 6px;
+  margin-bottom: 1.25rem;
+  color: white;
+}
+
+.docs-card h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: var(--aws-orange);
+}
+
+.docs-card p {
+  color: var(--aws-dark-gray);
+  line-height: 1.6;
+  flex-grow: 1;
+}
+
+.docs-link {
+  display: inline-flex;
+  align-items: center;
+  color: var(--aws-light-blue);
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  margin-top: auto;
+}
+
+.docs-link:hover {
+  color: var(--aws-orange);
+}
+
+/* Call-to-action section enhanced */
 .cta-section {
   padding: 5rem 0;
   background: linear-gradient(135deg, var(--aws-orange) 0%, #e05c12 100%);
   color: white;
   text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.cta-background {
+  display: none;
 }
 
 .cta-section h2 {
   margin-bottom: 2rem;
-  font-size: 2rem;
+  font-size: 2.5rem;
+  font-weight: 700;
 }
 
 .cta-buttons {
   display: flex;
   justify-content: center;
-  gap: 1rem;
+  gap: 1.5rem;
   flex-wrap: wrap;
+}
+
+.cta-section a {
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.copy-command {
+  transition: all 0.3s ease;
+}
+
+.copy-command:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  .features-grid, .code-grid {
+  .features-grid, .code-grid, .docs-grid {
     grid-template-columns: 1fr;
   }
   
   .landing-hero {
-    padding: 3rem 0;
+    padding: 4rem 0 0;
   }
   
   .terminal-preview {
     font-size: 12px;
   }
   
-  .feature-card, .code-card {
+  .hero-wave, .wave-divider {
+    height: 80px;
+  }
+  
+  .feature-card, .code-card, .docs-card {
     padding: 1.5rem;
   }
+  
+  .features-heading, .code-heading, .docs-heading {
+    font-size: 2.25rem;
+  }
+  
+  .cta-section h2 {
+    font-size: 2.25rem;
+  }
 }
-
-/* Create an S3 pattern SVG to add to the /public directory */
-/* Save this as s3-pattern.svg in your public folder */
-/* 
-<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <pattern id="s3-pattern" patternUnits="userSpaceOnUse" width="100" height="100">
-      <path d="M50 15L85 35v30L50 85L15 65V35L50 15z" stroke="white" stroke-width="0.5" fill="none" opacity="0.2"/>
-      <path d="M50 0L100 25v50L50 100L0 75V25L50 0z" stroke="white" stroke-width="0.5" fill="none" opacity="0.1"/>
-      <circle cx="50" cy="50" r="3" fill="white" opacity="0.3" />
-      <circle cx="15" cy="35" r="2" fill="white" opacity="0.2" />
-      <circle cx="85" cy="35" r="2" fill="white" opacity="0.2" />
-      <circle cx="15" cy="65" r="2" fill="white" opacity="0.2" />
-      <circle cx="85" cy="65" r="2" fill="white" opacity="0.2" />
-    </pattern>
-  </defs>
-  <rect width="100%" height="100%" fill="url(#s3-pattern)" />
-</svg>
-*/
-

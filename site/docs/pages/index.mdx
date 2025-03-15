@@ -5,227 +5,301 @@ content:
   horizontalPadding: 0px
 ---
 
-<div className="w-full max-w-none overflow-hidden">
-  {/* Hero Section with full-width gradient */}
-  <div className="w-full bg-gradient-to-br from-[#FFFAF0] to-white dark:from-[#1A1A1A] dark:to-[#111] py-20">
-    <div className="max-w-2xl mx-auto px-6">
-      <div className="flex flex-col items-center text-center mb-12">
-        <div className="relative mb-8">
-          <div className="absolute inset-0 bg-[#FF9900] rounded-full blur-md opacity-70"></div>
-          <div className="relative bg-gradient-to-br from-[#FF9900] to-[#FFC400] p-5 rounded-full shadow-xl">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="56"
-              height="56"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="white"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-              <polyline points="17 8 12 3 7 8"></polyline>
-              <line x1="12" y1="3" x2="12" y2="15"></line>
-            </svg>
-          </div>
+<div className="landing-hero">
+
+  <div className="hero-content">
+    <div className="text-center gap-4 flex flex-col items-center">
+      <div className="mb-6  flex justify-center">
+        <div className="text-[var(--aws-orange)] text-5xl">⚡</div>
+      </div>
+      
+      <h1 className="text-4xl md:text-6xl font-bold mb-6 text-white">
+        <span className="text-[var(--aws-orange)]">s3u</span> AWS Upload Utility
+      </h1>
+      
+      <p className="text-lg text-white/80 mb-8 max-w-3xl mx-auto">
+        An interactive command-line tool for optimizing images, uploading files to S3, and generating CloudFront URLs with advanced capabilities.
+      </p>
+      
+      <div className="flex flex-wrap gap-4 justify-center">
+        <a href="/docs/getting-started" className="bg-[var(--aws-orange)] hover:bg-[#e68a00] transition-all duration-200 text-white px-6 py-3 rounded-md font-medium flex items-center">
+          Get Started
+          <span className="ml-2">→</span>
+        </a>
+        <a href="https://github.com/danhilse/s3u" className="text-white border border-white/30 hover:bg-white/10 transition-all duration-200 px-6 py-3 rounded-md font-medium">
+          View on GitHub
+        </a>
+      </div>
+    </div>
+    
+    <div className="terminal-container">
+      <div className="terminal-preview animate-rise">
+        <div className="terminal-header">
+          <div className="terminal-button bg-red-500"></div>
+          <div className="terminal-button bg-yellow-500"></div>
+          <div className="terminal-button bg-green-500"></div>
+          <div className="ml-3 text-white/70 text-sm">Terminal</div>
         </div>
-        
-        <h1 className="text-6xl font-bold tracking-tight mb-4 text-[#232F3E] dark:text-white">S3U</h1>
-        <p className="text-3xl font-light max-w-3xl mx-auto mb-10 leading-relaxed text-gray-700 dark:text-gray-200">
-          <span className="font-semibold text-[#FF9900]">One command</span> to upload, optimize, and get web-ready media links from AWS S3
-        </p>
-        
-        <div className="flex flex-wrap justify-center gap-4">
-          <a href="/getting-started" className="px-8 py-3 text-lg shadow-lg hover:shadow-xl transition-all duration-300 bg-[#FF9900] hover:bg-[#F59E0B] text-white border-none rounded-md font-medium">Get Started</a>
-          <a href="https://github.com/danhilse/s3u" className="px-8 py-3 text-lg shadow-lg hover:shadow-xl transition-all duration-300 bg-transparent text-gray-700 dark:text-white border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-md font-medium">View on GitHub</a>
+        <div className="terminal-body">
+          <p><span className="terminal-prompt">$</span> pip install s3u</p>
+          <p><span className="terminal-response">> Successfully installed s3u-1.2.0</span></p>
+          <p></p>
+          <p><span className="terminal-prompt">$</span> s3u -setup</p>
+          <p><span className="terminal-response">> AWS configuration completed</span></p>
+          <p></p>
+          <p className="animate-typing"><span className="terminal-prompt">$</span> s3u</p>
+          <p><span className="terminal-status">> Starting interactive mode...</span></p>
+          <p><span className="terminal-progress">> Uploading to S3: <span className="animate-progress">[████████████]</span> 100%</span></p>
+          <p><span className="terminal-success">> CloudFront URLs generated!</span></p>
+          <p><span className="terminal-url">> https://cdn.example.com/images/photo.jpg</span></p>
         </div>
       </div>
     </div>
   </div>
+  
+  <div className="hero-wave">
+    <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0 0L48 8.875C96 17.75 192 35.5 288 44.375C384 53.25 480 53.25 576 44.375C672 35.5 768 17.75 864 26.625C960 35.5 1056 71 1152 80.3125C1248 89.625 1344 71.3125 1392 62.4375L1440 53.5625V120H1392C1344 120 1248 120 1152 120C1056 120 960 120 864 120C768 120 672 120 576 120C480 120 384 120 288 120C192 120 96 120 48 120H0V0Z" fill="var(--wave-color)"/>
+    </svg>
+  </div>
+</div>
 
-  {/* Main content section */}
-  <div className="w-full bg-white dark:bg-[#111]">
-    <div className="max-w-3xl mx-auto px-6 -mt-6">
-      {/* Terminal Display */}
-      <div className="rounded-xl shadow-2xl overflow-hidden mb-24">
-        <div className="bg-[#2D3748] flex items-center px-4 py-2 border-b border-[#4A5568]">
-          <div className="flex space-x-2 mr-4">
-            <div className="w-3 h-3 rounded-full bg-[#FC8181]"></div>
-            <div className="w-3 h-3 rounded-full bg-[#F6E05E]"></div>
-            <div className="w-3 h-3 rounded-full bg-[#68D391]"></div>
-          </div>
-          <span className="text-white text-sm font-medium">s3u-terminal</span>
+<div id="features" className="features-section">
+  <div className="container mx-auto">
+    <h2 className="features-heading">Key Features</h2>
+    
+    <div className="features-grid">
+      <div className="feature-card">
+        <div className="rounded-md w-10 h-10 flex items-center justify-center bg-[var(--aws-blue)] text-white mb-4">
+          <span className="text-xl">⌨️</span>
         </div>
-        <div className="bg-[#1A202C] text-white p-6 font-mono text-sm leading-relaxed">
-          <p><span className="text-[#9AE6B4]">$</span> <span className="text-[#A0AEC0]"># Install</span></p>
-          <p className="mb-4"><span className="text-[#9AE6B4]">$</span> pip install s3u</p>
-          
-          <p><span className="text-[#9AE6B4]">$</span> <span className="text-[#A0AEC0]"># First-time setup (one-time only)</span></p>
-          <p className="mb-4"><span className="text-[#9AE6B4]">$</span> s3u -setup</p>
-          
-          <p><span className="text-[#9AE6B4]">$</span> <span className="text-[#A0AEC0]"># Upload with interactive prompts</span></p>
-          <p className="mb-4"><span className="text-[#9AE6B4]">$</span> s3u</p>
-          
-          <p><span className="text-[#9AE6B4]">$</span> <span className="text-[#A0AEC0]"># Get CDN links from an existing folder</span></p>
-          <p><span className="text-[#9AE6B4]">$</span> s3u -b images</p>
-          <p className="text-[#90CDF4] mt-1 animate-pulse">✓ Generated 42 URLs - copied to clipboard</p>
+        <h3 className="text-xl font-semibold mb-2">Interactive Interface</h3>
+        <p>Intuitive CLI experience without the need to remember complex flags</p>
+      </div>
+      
+      <div className="feature-card">
+        <div className="rounded-md w-10 h-10 flex items-center justify-center bg-[var(--aws-blue)] text-white mb-4">
+          <span className="text-xl">🖼️</span>
+        </div>
+        <h3 className="text-xl font-semibold mb-2">Image Optimization</h3>
+        <p>Automatically resize and compress images using FFmpeg</p>
+      </div>
+      
+      <div className="feature-card">
+        <div className="rounded-md w-10 h-10 flex items-center justify-center bg-[var(--aws-blue)] text-white mb-4">
+          <span className="text-xl">📤</span>
+        </div>
+        <h3 className="text-xl font-semibold mb-2">Batch Uploads</h3>
+        <p>Process multiple files with concurrent transfers</p>
+      </div>
+      
+      <div className="feature-card">
+        <div className="rounded-md w-10 h-10 flex items-center justify-center bg-[var(--aws-blue)] text-white mb-4">
+          <span className="text-xl">☁️</span>
+        </div>
+        <h3 className="text-xl font-semibold mb-2">CloudFront Integration</h3>
+        <p>Generate CDN URLs automatically for faster content delivery</p>
+      </div>
+      
+      <div className="feature-card">
+        <div className="rounded-md w-10 h-10 flex items-center justify-center bg-[var(--aws-blue)] text-white mb-4">
+          <span className="text-xl">📄</span>
+        </div>
+        <h3 className="text-xl font-semibold mb-2">Multiple Output Formats</h3>
+        <p>Export data in JSON, XML, HTML, or CSV formats</p>
+      </div>
+      
+      <div className="feature-card">
+        <div className="rounded-md w-10 h-10 flex items-center justify-center bg-[var(--aws-blue)] text-white mb-4">
+          <span className="text-xl">⚙️</span>
+        </div>
+        <h3 className="text-xl font-semibold mb-2">Persistent Configuration</h3>
+        <p>Save your settings with an intuitive selection system</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="examples" className="code-examples-section">
+  <div className="container mx-auto">
+    <h2 className="code-heading">Code Examples</h2>
+    
+    <div className="code-grid">
+      <div className="code-card">
+        <h3>Quick Start</h3>
+        <div className="code-block">
+          <pre>
+            <code>{`# Install the package
+pip install s3u
+
+# First-time setup
+s3u -setup
+
+# Upload files (interactive mode)
+s3u
+
+# List all folders in your bucket
+s3u -ls
+
+# Download a folder
+s3u -d folder_name`}</code>
+          </pre>
         </div>
       </div>
+      
+      <div className="code-card">
+        <h3>Image Optimization</h3>
+        <div className="code-block">
+          <pre>
+            <code>{`# Set optimization parameters
+s3u -optimize --width 1200 --quality 85
 
-      {/* Features Cards */}
-      <div className="grid md:grid-cols-3 gap-8 mb-24">
-        <div className="bg-white dark:bg-[#1E1E1E] p-8 rounded-xl shadow-md hover:shadow-lg border border-[#FF990030] transition-all duration-300 transform hover:-translate-y-1">
-          <div className="text-[#FF9900] mb-6">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="40"
-              height="40"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="12" cy="12" r="10"></circle>
-              <polyline points="12 6 12 12 16 14"></polyline>
-            </svg>
-          </div>
-          <h3 className="text-xl font-bold mb-3 text-gray-800 dark:text-white">Interactive & Fast</h3>
-          <p className="text-gray-600 dark:text-gray-300">Tab-completed directories, easy prompts, and up to 20 concurrent uploads for maximum efficiency.</p>
-        </div>
-        
-        <div className="bg-white dark:bg-[#1E1E1E] p-8 rounded-xl shadow-md hover:shadow-lg border border-[#FF990030] transition-all duration-300 transform hover:-translate-y-1">
-          <div className="text-[#FF9900] mb-6">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="40"
-              height="40"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path>
-              <path d="M12 12v9"></path>
-              <path d="m9 18 3 3 3-3"></path>
-            </svg>
-          </div>
-          <h3 className="text-xl font-bold mb-3 text-gray-800 dark:text-white">Auto-Optimization</h3>
-          <p className="text-gray-600 dark:text-gray-300">Automatically resize and compress images and videos for web while preserving quality.</p>
-        </div>
-        
-        <div className="bg-white dark:bg-[#1E1E1E] p-8 rounded-xl shadow-md hover:shadow-lg border border-[#FF990030] transition-all duration-300 transform hover:-translate-y-1">
-          <div className="text-[#FF9900] mb-6">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="40"
-              height="40"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-            </svg>
-          </div>
-          <h3 className="text-xl font-bold mb-3 text-gray-800 dark:text-white">Instant CDN Links</h3>
-          <p className="text-gray-600 dark:text-gray-300">Get CloudFront URLs automatically copied to clipboard in various formats (JSON, HTML, CSV).</p>
+# Convert images to different format
+s3u -format webp --quality 90
+
+# Batch process a directory of images
+s3u -batch /path/to/images --optimize`}</code>
+          </pre>
         </div>
       </div>
+      
+      <div className="code-card">
+        <h3>CloudFront Integration</h3>
+        <div className="code-block">
+          <pre>
+            <code>{`# Generate CloudFront URLs for existing files
+s3u -cdn path/to/file.jpg
 
-      {/* Redesigned Command Overview */}
-      <div className="mb-24">
-        <h2 className="text-2xl font-bold mb-8 text-center text-gray-800 dark:text-white">Common Commands</h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white dark:bg-[#1E1E1E] rounded-lg overflow-hidden shadow-md border border-gray-200 dark:border-gray-800">
-            <div className="bg-[#FF9900] px-4 py-3">
-              <h3 className="text-white font-medium">Core Operations</h3>
-            </div>
-            <div className="p-4 space-y-3">
-              <div className="flex items-start p-3 bg-gray-50 dark:bg-[#111] rounded-md">
-                <code className="font-mono text-[#FF9900] font-bold mr-3 flex-shrink-0">s3u</code>
-                <div>
-                  <p className="text-gray-700 dark:text-gray-300">Start interactive upload process</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Guides you through uploading files step by step</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start p-3 bg-gray-50 dark:bg-[#111] rounded-md">
-                <code className="font-mono text-[#FF9900] font-bold mr-3 flex-shrink-0">s3u -q</code>
-                <div>
-                  <p className="text-gray-700 dark:text-gray-300">Quick mode with default settings</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Skip prompts and use your saved configuration</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start p-3 bg-gray-50 dark:bg-[#111] rounded-md">
-                <code className="font-mono text-[#FF9900] font-bold mr-3 flex-shrink-0">s3u -config</code>
-                <div>
-                  <p className="text-gray-700 dark:text-gray-300">Configure options interactively</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Set up your preferred defaults for future uploads</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white dark:bg-[#1E1E1E] rounded-lg overflow-hidden shadow-md border border-gray-200 dark:border-gray-800">
-            <div className="bg-[#232F3E] px-4 py-3">
-              <h3 className="text-white font-medium">Content Management</h3>
-            </div>
-            <div className="p-4 space-y-3">
-              <div className="flex items-start p-3 bg-gray-50 dark:bg-[#111] rounded-md">
-                <code className="font-mono text-[#FF9900] font-bold mr-3 flex-shrink-0">s3u -ls</code>
-                <div>
-                  <p className="text-gray-700 dark:text-gray-300">List all folders in your bucket</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">View your organized content structure</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start p-3 bg-gray-50 dark:bg-[#111] rounded-md">
-                <code className="font-mono text-[#FF9900] font-bold mr-3 flex-shrink-0">s3u -b folder</code>
-                <div>
-                  <p className="text-gray-700 dark:text-gray-300">Get CDN links from existing content</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Retrieve links for already uploaded media</p>
-                </div>
-              </div>
-              
-              <div className="flex items-start p-3 bg-gray-50 dark:bg-[#111] rounded-md">
-                <code className="font-mono text-[#FF9900] font-bold mr-3 flex-shrink-0">s3u -d folder</code>
-                <div>
-                  <p className="text-gray-700 dark:text-gray-300">Download files from a folder</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Retrieve content with progress tracking</p>
-                </div>
-              </div>
-            </div>
-          </div>
+# Get URLs for all files in a folder
+s3u -cdn-all images/gallery
+
+# Set custom TTL for CloudFront cache
+s3u -cdn-ttl 86400 path/to/file.jpg`}</code>
+          </pre>
         </div>
       </div>
+    </div>
+  </div>
+  
+  <div className="wave-divider">
+    <svg viewBox="0 0 1440 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0 120L48 111.125C96 102.25 192 84.5 288 75.625C384 66.75 480 66.75 576 75.625C672 84.5 768 102.25 864 93.375C960 84.5 1056 49 1152 39.6875C1248 30.375 1344 48.6875 1392 57.5625L1440 66.4375V0H1392C1344 0 1248 0 1152 0C1056 0 960 0 864 0C768 0 672 0 576 0C480 0 384 0 288 0C192 0 96 0 48 0H0V120Z" fill="var(--wave-color-alt)"/>
+    </svg>
+  </div>
+</div>
 
-      {/* Perfect For section */}
-      <div className="text-center mb-24">
-        <h2 className="text-2xl font-bold mb-6 text-gray-800 dark:text-white">Perfect For</h2>
-        <div className="flex flex-wrap justify-center gap-4">
-          <span className="px-5 py-2 bg-[#FF9900] text-white rounded-full font-medium shadow-md">Web Developers</span>
-          <span className="px-5 py-2 bg-[#FF9900] text-white rounded-full font-medium shadow-md">Content Creators</span>
-          <span className="px-5 py-2 bg-[#FF9900] text-white rounded-full font-medium shadow-md">Digital Artists</span>
-          <span className="px-5 py-2 bg-[#FF9900] text-white rounded-full font-medium shadow-md">Photographers</span>
-          <span className="px-5 py-2 bg-[#FF9900] text-white rounded-full font-medium shadow-md">Marketing Teams</span>
+<div id="documentation" className="docs-section">
+  <div className="container mx-auto">
+    <h2 className="docs-heading">Documentation</h2>
+    
+    <div className="docs-grid">
+      <div className="docs-card">
+        <div className="docs-icon-container">
+          <span className="text-xl">📚</span>
         </div>
+        <h3>Getting Started</h3>
+        <p className="mb-4">Complete overview of features and usage</p>
+        <a 
+          href="/getting-started" 
+          className="docs-link"
+        >
+          <span>Read documentation</span>
+          <span className="ml-1">→</span>
+        </a>
       </div>
+      
+      <div className="docs-card">
+        <div className="docs-icon-container">
+          <span className="text-xl">⚙️</span>
+        </div>
+        <h3>Configuration</h3>
+        <p className="mb-4">Detailed settings explanations</p>
+        <a 
+          href="/configuration" 
+          className="docs-link"
+        >
+          <span>Read documentation</span>
+          <span className="ml-1">→</span>
+        </a>
+      </div>
+      
+      <div className="docs-card">
+        <div className="docs-icon-container">
+          <span className="text-xl">🔧</span>
+        </div>
+        <h3>Utility Functions</h3>
+        <p className="mb-4">Non-upload functionality</p>
+        <a 
+          href="/utility-functions" 
+          className="docs-link"
+        >
+          <span>Read documentation</span>
+          <span className="ml-1">→</span>
+        </a>
+      </div>
+      
+      <div className="docs-card">
+        <div className="docs-icon-container">
+          <span className="text-xl">📤</span>
+        </div>
+        <h3>Core Uploading</h3>
+        <p className="mb-4">Detailed upload process explanation</p>
+        <a 
+          href="/core-uploading" 
+          className="docs-link"
+        >
+          <span>Read documentation</span>
+          <span className="ml-1">→</span>
+        </a>
+      </div>
+      
+      <div className="docs-card">
+        <div className="docs-icon-container">
+          <span className="text-xl">📄</span>
+        </div>
+        <h3>API Reference</h3>
+        <p className="mb-4">Technical reference for developers</p>
+        <a 
+          href="/reference" 
+          className="docs-link"
+        >
+          <span>Read documentation</span>
+          <span className="ml-1">→</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
 
-      {/* Get Started CTA */}
-      <div className="text-center bg-[#FFFAF0] dark:bg-[#1A1A1A] rounded-xl p-12 shadow-md mb-16 border border-[#FFD79930] dark:border-[#333]">
-        <h2 className="text-3xl font-bold mb-4 text-gray-800 dark:text-white">Ready to Streamline Your AWS Uploads?</h2>
-        <p className="text-gray-600 dark:text-gray-300 mb-8 text-lg">Get started in less than 2 minutes with a simple installation</p>
-        <a href="/getting-started" className="px-8 py-3 text-lg shadow-lg hover:shadow-xl transition-all duration-300 bg-[#FF9900] hover:bg-[#F59E0B] text-white border-none rounded-md font-medium inline-block">Get Started →</a>
+<div className="cta-section">
+  <div className="cta-background"></div>
+  <div className="container mx-auto px-6 text-center relative z-10">
+    <h2 className="text-4xl md:text-5xl font-extrabold mb-8 text-white tracking-tight">
+      Ready to Get Started?
+    </h2>
+    
+    <p className="text-xl text-white/90 mb-10 max-w-2xl mx-auto">
+      Install S3U today and experience the power of efficient media management with the simplicity of a command-line tool.
+    </p>
+    
+    <div className="flex flex-wrap justify-center gap-4 mb-8">
+      <a href="/getting-started#installation" className="bg-[var(--aws-blue)] hover:bg-[#1a2533] transition-all duration-200 text-white px-6 py-3 rounded-md font-medium flex items-center">
+        <span className="mr-2">⌨️</span>
+        Install with pip
+      </a>
+      
+      <a href="https://github.com/danhilse/s3u" className="text-white border border-white hover:bg-white/10 transition-all duration-200 px-6 py-3 rounded-md font-medium flex items-center">
+        <span className="mr-2">📦</span>
+        View on GitHub
+      </a>
+    </div>
+    
+    <div className="mt-6">
+      <div className="inline-flex items-center gap-2 py-2 px-4 rounded-md bg-white/10 text-white border border-white/20">
+        <code className="text-sm font-mono">pip install s3u</code>
+        <button className="h-7 px-2 text-white hover:bg-white/10 bg-transparent border-none cursor-pointer text-sm">
+          Copy
+        </button>
       </div>
     </div>
   </div>
