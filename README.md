@@ -30,13 +30,13 @@ s3u -d folder_name
 
 ## 📖 Documentation
 
-S3U now comes with comprehensive documentation:
+S3U comes with comprehensive documentation available at [https://danhilse.github.io/s3u/](https://danhilse.github.io/s3u/):
 
-- [User Guide](docs/s3u-user-guide.md) - Complete overview of features and usage
-- [Configuration Guide](docs/s3u-configuration-guide.md) - Detailed settings explanations
-- [Utility Functions Guide](docs/s3u-utility-functions-guide.md) - Non-upload functionality
-- [Core Uploading Guide](docs/s3u-upload-guide.md) - Detailed upload process explanation
-- [AWS Setup Guide](docs/aws-setup-guide.md) - Setting up required AWS resources
+- [Getting Started](https://danhilse.github.io/s3u/getting-started/) - Complete overview of features and usage
+- [Configuration](https://danhilse.github.io/s3u/configuration/) - Detailed settings explanations
+- [Utility Functions](https://danhilse.github.io/s3u/utility-functions/) - Non-upload functionality
+- [Core Uploading](https://danhilse.github.io/s3u/core-uploading/) - Detailed upload process explanation
+- [API Reference](https://danhilse.github.io/s3u/reference/) - Technical reference for developers
 
 ## ✨ Features
 
@@ -118,7 +118,7 @@ s3u -d folder_name
 s3u -q
 ```
 
-See the [User Guide](docs/s3u-user-guide.md) for a complete list of command line options.
+See the [Getting Started](https://danhilse.github.io/s3u/getting-started/) page for a complete list of command line options.
 
 ### Configuration System
 
@@ -148,7 +148,7 @@ s3u -config format json
 | image_format | Image output format | webp, jpg, avif | webp |
 | video_format | Video output format | mp4, webm | mp4 |
 
-See the [Configuration Guide](docs/s3u-configuration-guide.md) for detailed explanations.
+See the [Configuration](https://danhilse.github.io/s3u/configuration/) page for detailed explanations.
 
 ## 🗂️ Working with Folders
 
@@ -218,7 +218,7 @@ s3u -b folder_name 12
 s3u -b folder_name -sf preserve
 ```
 
-See the [Utility Functions Guide](docs/s3u-utility-functions-guide.md) for more folder operations.
+See the [Utility Functions](https://danhilse.github.io/s3u/utility-functions/) page for more folder operations.
 
 ## 🖼️ Media Optimization
 
@@ -245,7 +245,7 @@ For video files, S3U supports:
 - Resolution adjustment
 - Optional audio removal (patches mode)
 
-See the [Core Uploading Guide](docs/s3u-upload-guide.md) for detailed optimization options.
+See the [Core Uploading](https://danhilse.github.io/s3u/core-uploading/) page for detailed optimization options.
 
 ## ⚙️ Configuration File
 
