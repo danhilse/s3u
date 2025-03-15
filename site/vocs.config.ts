@@ -3,6 +3,11 @@ import { defineConfig } from 'vocs'
 export default defineConfig({
   title: 's3u Documentation',
   description: 'Documentation for s3u - AWS S3 Upload Utility',
+
+  basePath: '/s3u/',
+  vite: {
+    base: '/s3u/',
+  },
   
   sidebar: [
     {
