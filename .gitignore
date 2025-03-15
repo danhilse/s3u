@@ -35,6 +35,7 @@ venv.bak/
 
 # Node.js
 site/node_modules/
+site/docs/dist/
 
 # IDE specific files
 .idea/
@@ -48,13 +49,3 @@ Thumbs.db
 
 # Local configuration
 *.local.py
-
-# Python bytecode
-__pycache__/
-*.py[cod]
-*$py.class
-
-# Build/distribution
-*.egg-info/
-dist/
-build/

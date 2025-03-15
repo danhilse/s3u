@@ -4,10 +4,8 @@ export default defineConfig({
   title: 's3u Documentation',
   description: 'Documentation for s3u - AWS S3 Upload Utility',
 
-  // GitHub Pages will serve this at https://danhilse.github.io/s3u/
+  // GitHub Pages configuration - replace "danhilse" with your GitHub username
   basePath: '/s3u/',
-  
-  // Configure Vite to use the correct base path for GitHub Pages
   vite: {
     base: '/s3u/',
   },
@@ -91,7 +89,7 @@ export default defineConfig({
     }
   },
   
-  // Set up social media links
+  // Optional: Set up social media links
   socialLinks: [
     {
       icon: 'github',
@@ -109,10 +107,11 @@ export default defineConfig({
   head: {
     meta: [
       { name: 'keywords', content: 'aws, s3, upload, cloudfront, file management, image optimization' },
+      { name: 'author', content: 'Dan Hilse' },
     ],
     // Favicon
     link: [
-      { rel: 'icon', type: 'image/x-icon', href: '/s3u/favicon.ico' }
+      { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
     ]
   }
 })
