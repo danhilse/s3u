@@ -1,13 +1,21 @@
 {
   "name": "s3u-docs",
   "version": "1.0.0",
-  "private": true,
+  "type": "module",
   "scripts": {
-    "docs:dev": "vocs dev",
-    "docs:build": "vocs build",
-    "docs:preview": "vocs preview"
+    "dev": "vocs dev",
+    "build": "vocs build",
+    "preview": "vocs preview",
+    "start": "bun x serve@latest ./docs/dist"
   },
   "dependencies": {
-    "vocs": "^1.0.0"
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "vocs": "^1.0.0-alpha.62"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "typescript": "^5.7.3"
   }
 }
