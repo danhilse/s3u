@@ -1,0 +1,152 @@
+/* Custom styling for S3U documentation */
+@import "tailwindcss";
+
+:root {
+  --aws-orange: #FF9900;
+  --aws-blue: #232F3E;
+  --aws-light-blue: #1A73E8;
+  --aws-light-gray: #f4f4f4;
+  --aws-dark-gray: #444;
+}
+
+:root.dark {
+  --vocs-color-background: #121212;
+  --aws-light-gray: #2a2a2a;
+  --aws-dark-gray: #aaa;
+}
+
+.Vocs_H1 {
+  color: var(--aws-orange);
+  margin-bottom: 1.5rem;
+}
+
+.Vocs_H2 {
+  border-bottom: 1px solid var(--aws-orange);
+  padding-bottom: 0.5rem;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+
+.Vocs_CodeBlock {
+  border-left: 4px solid var(--aws-orange);
+}
+
+.Vocs_Button--accent {
+  background-color: var(--aws-orange);
+}
+
+.Vocs_Button--accent:hover {
+  background-color: #e68a00;
+}
+
+/* ----- SIDEBAR STYLING ----- */
+
+/* Main section titles */
+.vocs_Sidebar_sectionTitle {
+  font-weight: 700 !important;
+  transition: all 0.2s ease !important;
+  position: relative !important;
+}
+
+/* Prevent clicking on section title from collapsing (JS override) */
+.vocs_Sidebar_sectionTitle::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  pointer-events: none;
+}
+
+
+
+/* Fallback for browsers that don't support :has */
+.vocs_Sidebar_sectionHeader[data-expanded="true"]::before {
+  transform: rotate(90deg) !important;
+}
+
+
+
+/* Active/hover main section */
+.vocs_Sidebar_sectionTitle[data-active="true"],
+.vocs_Sidebar_sectionTitle:hover {
+  color: var(--aws-orange) !important;
+}
+
+/* Section spacing */
+.vocs_Sidebar_section {
+  margin-bottom: 8px !important;
+  padding-bottom: 8px !important;
+  border-bottom: 1px solid var(--aws-light-gray) !important;
+}
+
+.vocs_Sidebar_section:last-child {
+  border-bottom: none !important;
+}
+
+/* Items container (for sub-items) */
+.vocs_Sidebar_items {
+  padding-left: 20px !important;
+  margin-bottom: 12px !important;
+}
+
+/* Better table styling */
+table {
+  width: 100%;
+  margin: 1.5rem 0;
+  border-collapse: collapse;
+}
+
+table th {
+  background-color: var(--aws-blue);
+  color: white;
+  padding: 0.75rem;
+  text-align: left;
+}
+
+table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--aws-light-gray);
+}
+
+table tr:nth-child(even) {
+  background-color: var(--aws-light-gray);
+}
+
+/* To help with click targeting, use JavaScript to add this functionality */
+/* This adds a button to toggle the sidebar section */
+/* This won't work with just CSS, but we'll include it to remind us of the change needed */
+.vocs_Sidebar_sectionHeader {
+  cursor: default !important;
+}
+
+/* Add this script to the page to modify the click behavior */
+/* Since we can't add JavaScript with CSS, this is just a reminder */
+/* 
+document.addEventListener('DOMContentLoaded', function() {
+  // Find all section headers
+  const sectionHeaders = document.querySelectorAll('.vocs_Sidebar_sectionHeader');
+  
+  // For each header
+  sectionHeaders.forEach(header => {
+    // Create a new click handler
+    header.addEventListener('click', function(e) {
+      // If the click is on the chevron (first 24px) 
+      if (e.offsetX < 24) {
+        // Let the click through to toggle
+      } else {
+        // Prevent the default toggle behavior
+        e.stopPropagation();
+        
+        // Find the section title link and click it instead
+        const titleLink = header.querySelector('.vocs_Sidebar_sectionTitle');
+        if (titleLink) {
+          titleLink.click();
+        }
+      }
+    });
+  });
+});
+*/

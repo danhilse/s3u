@@ -33,6 +33,9 @@ ENV/
 env.bak/
 venv.bak/
 
+# Node.js
+site/node_modules/
+
 # IDE specific files
 .idea/
 .vscode/

@@ -1,0 +1,12 @@
+{
+  "name": "s3u-docs",
+  "version": "1.0.0",
+  "scripts": {
+    "docs:dev": "vocs dev",
+    "docs:build": "vocs build",
+    "docs:preview": "vocs preview"
+  },
+  "dependencies": {
+    "vocs": "^1.0.0"
+  }
+}

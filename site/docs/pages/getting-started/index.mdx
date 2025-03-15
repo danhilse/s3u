@@ -1,0 +1,356 @@
+---
+layout: docs
+---
+
+# Getting Started
+
+S3U is a powerful command-line utility for uploading files to Amazon S3 and generating CloudFront URLs. This guide will help you get up and running quickly.
+
+## Installation
+
+S3U can be installed using pip, the Python package manager:
+
+```bash
+pip install s3u
+```
+
+For the latest development version, you can install directly from GitHub:
+
+```bash
+pip install git+https://github.com/yourusername/s3u.git
+```
+
+:::info
+S3U requires Python 3.8 or higher.
+:::
+
+### Prerequisites
+
+Before using S3U, ensure you have:
+
+1. **Python 3.8+** installed on your system
+2. **FFmpeg and FFprobe** installed (required for image optimization)
+3. **AWS credentials** configured
+4. An **S3 bucket** with appropriate permissions
+5. A **CloudFront distribution** connected to your S3 bucket (recommended)
+
+#### Installing FFmpeg
+
+FFmpeg is required for image and video optimization features:
+
+::::steps
+### On macOS:
+```bash
+brew install ffmpeg
+```
+
+### On Ubuntu/Debian:
+```bash
+sudo apt update
+sudo apt install ffmpeg
+```
+
+### On Windows:
+1. Download FFmpeg from [ffmpeg.org](https://ffmpeg.org/download.html)
+2. Extract the files to a folder (e.g., `C:\ffmpeg`)
+3. Add the bin folder to your PATH: `C:\ffmpeg\bin`
+::::
+
+### Verifying Installation
+
+To verify that S3U is installed correctly, run:
+
+```bash
+s3u --version
+```
+
+You should see output showing the version number:
+
+```
+S3 Upload Utility v1.2.3
+```
+
+## AWS Configuration
+
+S3U requires proper AWS configuration to access your S3 buckets and CloudFront distribution.
+
+### Setting Up AWS Credentials
+
+S3U uses the standard AWS credential system. You can configure your credentials in several ways:
+
+::::steps
+### AWS CLI Configuration
+The simplest method is to use the AWS CLI:
+
+```bash
+aws configure
+```
+
+This will prompt you for:
+- AWS Access Key ID
+- AWS Secret Access Key
+- Default region
+- Default output format
+
+### Manual Configuration
+Create or edit the credentials file located at:
+- Linux/macOS: `~/.aws/credentials`
+- Windows: `%USERPROFILE%\.aws\credentials`
+
+```ini
+[default]
+aws_access_key_id = YOUR_ACCESS_KEY
+aws_secret_access_key = YOUR_SECRET_KEY
+region = us-east-1
+```
+
+### Environment Variables
+Set the following environment variables:
+
+```bash
+export AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
+export AWS_SECRET_ACCESS_KEY=YOUR_SECRET_KEY
+export AWS_DEFAULT_REGION=us-east-1
+```
+
+On Windows:
+```cmd
+set AWS_ACCESS_KEY_ID=YOUR_ACCESS_KEY
+set AWS_SECRET_ACCESS_KEY=YOUR_SECRET_KEY
+set AWS_DEFAULT_REGION=us-east-1
+```
+::::
+
+:::danger
+Never hardcode your AWS credentials in your scripts or commit them to version control!
+:::
+
+### Required Permissions
+
+Your AWS user or role needs specific permissions to use S3U effectively:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListBucket",
+        "s3:GetBucketLocation"
+      ],
+      "Resource": [
+        "arn:aws:s3:::your-bucket-name"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::your-bucket-name/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "cloudfront:ListDistributions"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+```
+
+Replace `your-bucket-name` with your actual S3 bucket name.
+
+### Bucket Configuration
+
+Your S3 bucket needs to be properly configured, especially if you plan to use CloudFront for content delivery.
+
+::::steps
+### 1. Create an S3 Bucket
+If you don't already have an S3 bucket, create one:
+
+1. Open the [Amazon S3 Console](https://console.aws.amazon.com/s3/)
+2. Click "Create bucket"
+3. Enter a globally unique bucket name
+4. Select your preferred region
+5. Configure bucket settings (public access settings, versioning, etc.)
+6. Click "Create bucket"
+
+### 2. Configure CORS (Optional)
+If you'll be accessing the uploaded files from web applications, you may need to configure CORS:
+
+```json
+[
+  {
+    "AllowedHeaders": ["*"],
+    "AllowedMethods": ["GET"],
+    "AllowedOrigins": ["*"],
+    "ExposeHeaders": [],
+    "MaxAgeSeconds": 3000
+  }
+]
+```
+
+:::warning
+The CORS policy above allows access from any origin. For production, restrict the AllowedOrigins to your specific domains.
+:::
+
+### 3. Set up CloudFront Distribution
+For faster content delivery and better URL structure:
+
+1. Open the [CloudFront Console](https://console.aws.amazon.com/cloudfront/)
+2. Click "Create Distribution"
+3. Under "Origin Domain", select your S3 bucket
+4. Under "Origin Access", select "Origin Access Control settings (recommended)"
+5. Create a new OAC and allow CloudFront to create the bucket policy
+6. Configure other settings as needed (cache behavior, restrictions, etc.)
+7. Click "Create Distribution"
+
+### 4. Update Bucket Policy
+After creating the CloudFront distribution, ensure your bucket policy allows CloudFront access:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AllowCloudFrontServicePrincipal",
+      "Effect": "Allow",
+      "Principal": {
+        "Service": "cloudfront.amazonaws.com"
+      },
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::your-bucket-name/*",
+      "Condition": {
+        "StringEquals": {
+          "AWS:SourceArn": "arn:aws:cloudfront::your-account-id:distribution/your-distribution-id"
+        }
+      }
+    }
+  ]
+}
+```
+
+Replace:
+- `your-bucket-name` with your S3 bucket name
+- `your-account-id` with your AWS account ID
+- `your-distribution-id` with your CloudFront distribution ID
+::::
+
+### Custom AWS Profiles
+
+If you manage multiple AWS environments or accounts, you can use AWS profiles to switch between them in S3U:
+
+```bash
+s3u -config aws_profile production
+```
+
+To revert to using the default profile:
+```bash
+s3u -config aws_profile ""
+```
+
+## Setup
+
+After installing S3U and configuring AWS credentials, you need to configure S3U to use your S3 bucket and CloudFront distribution.
+
+### Initial Configuration
+
+Run the following command to set up your S3U configuration:
+
+```bash
+s3u --setup
+```
+
+This will guide you through the following steps:
+
+1. Setting your S3 bucket name
+2. Configuring your CloudFront distribution (if any)
+3. Setting default upload preferences
+4. Configuring output formats
+
+### Manual Configuration
+
+You can also manually edit the configuration file located at:
+
+- Linux/macOS: `~/.config/s3u/config.json`
+- Windows: `%APPDATA%\s3u\config.json`
+
+Here's an example configuration file:
+
+```json
+{
+  "bucket": "my-files-bucket",
+  "cloudfront_domain": "d1lbnboj0lfh6w.cloudfront.net",
+  "default_folder": "uploads",
+  "concurrent_uploads": 5,
+  "output_format": "array",
+  "optimize_media": "ask",
+  "rename_mode": "preserve",
+  "subfolder_handling": "ignore"
+}
+```
+
+### Verifying Configuration
+
+To verify your configuration, run:
+
+```bash
+s3u --status
+```
+
+This will display your current configuration settings:
+
+```
+S3 Upload Utility - Configuration Status
+----------------------------------------
+Bucket: my-files-bucket
+CloudFront: d1lbnboj0lfh6w.cloudfront.net
+AWS Profile: default
+Default Folder: uploads
+Concurrency: 5
+Output Format: array
+Media Optimization: ask
+Rename Mode: preserve
+Subfolder Handling: ignore
+```
+
+:::info
+CloudFront may take up to 30 minutes to fully deploy a new distribution. During this time, you might not be able to access your content through CloudFront URLs.
+:::
+
+## Your First Upload
+
+Now that you've installed and configured S3U, let's try a simple upload:
+
+```bash
+# Navigate to a directory with files to upload
+cd ~/Pictures/vacation
+
+# Start the interactive upload process
+s3u
+```
+
+Follow the prompts to upload your files. Upon completion, URLs for your uploaded files will be copied to your clipboard.
+
+:::tip
+For a quick upload without any prompts, use the quick mode:
+```bash
+s3u -q
+```
+:::
+
+## Next Steps
+
+Now that you have S3U installed and configured, you can learn more about:
+
+- [Core Uploading](../core-uploading/) - Learn about the advanced upload features
+- [Utility Functions](../utility-functions/) - Discover file management capabilities
+- [Configuration](../configuration/) - Customize S3U for your specific needs
+- [Reference](../reference/) - Complete command reference and troubleshooting

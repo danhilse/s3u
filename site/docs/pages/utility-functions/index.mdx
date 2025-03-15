@@ -1,0 +1,315 @@
+---
+layout: docs
+---
+
+# Reference
+
+This section provides a comprehensive reference for S3U, including all command line options, troubleshooting tips, and frequently asked questions.
+
+## Command Line Options
+
+S3U offers a wide range of command line options to control its behavior. Below is a complete reference of all available flags and options.
+
+### General Options
+
+| Option | Description |
+|--------|-------------|
+| `--help`, `-h` | Display help information |
+| `--version`, `-v` | Display version information |
+| `--setup` | Run the initial setup process |
+| `--status` | Display current configuration status |
+
+### Upload Options
+
+| Option | Description |
+|--------|-------------|
+| `-q`, `--quick` | Quick mode: upload with default settings |
+| `-c NUM`, `--concurrent NUM` | Set number of concurrent uploads (1-20) |
+| `-sf MODE`, `--subfolder MODE` | Set subfolder handling mode (ignore, pool, preserve) |
+| `-f`, `--first-only` | Copy only the first URL to clipboard |
+| `--force` | Skip confirmation prompts |
+| `--no-optimize` | Skip media optimization |
+
+### Utility Functions
+
+| Option | Description |
+|--------|-------------|
+| `-ls`, `--list` | List all folders in the bucket |
+| `-b FOLDER`, `--browse FOLDER` | Browse files in specified folder |
+| `-d FOLDER`, `--download FOLDER` | Download files from specified folder |
+| `-o DIR`, `--output DIR` | Specify output directory for downloads |
+| `-r PREFIX`, `--rename PREFIX` | Set rename prefix for this session |
+
+### Configuration
+
+| Option | Description |
+|--------|-------------|
+| `--config` | Display current configuration |
+| `--config OPTION` | View specific configuration option |
+| `--config OPTION VALUE` | Set configuration option |
+| `--config reset` | Reset configuration to defaults |
+
+### Examples
+
+Here are some examples of how to use these command line options:
+
+:::code-group
+```bash [Quick Upload]
+# Upload all files in current directory with default settings
+s3u -q
+```
+
+```bash [Custom Upload]
+# Upload with 10 concurrent uploads and preserve subfolder structure
+s3u -c 10 -sf preserve
+```
+
+```bash [Utility Functions]
+# List all folders in the bucket
+s3u -ls
+
+# Browse files in a folder
+s3u -b vacation_photos
+
+# Download a folder
+s3u -d vacation_photos -o ./downloads
+```
+
+```bash [Configuration]
+# View all configuration options
+s3u --config
+
+# Set output format to JSON
+s3u --config format json
+
+# Reset all configuration to defaults
+s3u --config reset
+```
+:::
+
+## Troubleshooting
+
+Here are solutions to common issues you might encounter when using S3U.
+
+### Authentication Issues
+
+#### "Access Denied" Error
+
+**Symptom**:
+```
+Error uploading file.jpg: AccessDenied - Access Denied (Service: Amazon S3)
+```
+
+**Possible Causes**:
+1. Invalid or expired AWS credentials
+2. Insufficient IAM permissions
+3. Bucket policy restrictions
+
+**Solutions**:
+1. Verify your AWS credentials:
+   ```bash
+   aws sts get-caller-identity
+   ```
+   
+2. Check your IAM permissions. You need at least these permissions:
+   ```json
+   {
+     "Effect": "Allow",
+     "Action": [
+       "s3:PutObject",
+       "s3:GetObject",
+       "s3:ListBucket"
+     ],
+     "Resource": [
+       "arn:aws:s3:::your-bucket-name",
+       "arn:aws:s3:::your-bucket-name/*"
+     ]
+   }
+   ```
+
+3. Try a different AWS profile:
+   ```bash
+   s3u -config aws_profile other-profile
+   ```
+
+### Upload Problems
+
+#### Slow Uploads
+
+**Symptom**: Uploads take significantly longer than expected.
+
+**Possible Causes**:
+1. Network limitations
+2. Excessive concurrency causing throttling
+3. Very large files
+
+**Solutions**:
+1. Adjust concurrency based on your network:
+   ```bash
+   s3u -c 5  # Lower value for stability
+   ```
+   
+2. For large files, try optimizing before upload:
+   ```bash
+   s3u
+   # Select 'yes' for optimization
+   ```
+   
+3. Check your network connection quality and bandwidth
+
+#### Timeouts During Upload
+
+**Symptom**:
+```
+Error uploading large_video.mp4: Connection timed out
+```
+
+**Possible Causes**:
+1. Network instability
+2. File size too large for single operation
+3. AWS throttling
+
+**Solutions**:
+1. Reduce concurrency:
+   ```bash
+   s3u -c 3
+   ```
+   
+2. For large files, consider splitting them into smaller parts
+3. Try at a different time or from a different network
+
+### Media Optimization Issues
+
+#### Optimization Fails
+
+**Symptom**:
+```
+Error optimizing image.jpg: Could not process file
+```
+
+**Possible Causes**:
+1. Missing dependencies
+2. Corrupted source file
+3. Insufficient system resources
+
+**Solutions**:
+1. Ensure required dependencies are installed:
+   ```bash
+   pip install pillow ffmpeg-python
+   ```
+   
+2. Verify the source file can be opened with other applications
+3. Reduce the number of worker processes:
+   ```bash
+   s3u -config max_workers 2
+   ```
+
+### CloudFront Issues
+
+#### URLs Not Working
+
+**Symptom**: Generated CloudFront URLs return 403 or don't load.
+
+**Possible Causes**:
+1. CloudFront distribution not properly configured
+2. Origin access settings incorrect
+3. CloudFront cache hasn't updated
+
+**Solutions**:
+1. Verify your CloudFront distribution settings in AWS Console
+2. Ensure the Origin settings point to the correct S3 bucket
+3. Wait for CloudFront propagation (can take 15-30 minutes)
+4. Check that your CloudFront URL in S3U config is correct:
+   ```bash
+   s3u -config cloudfront_url https://your-distribution-id.cloudfront.net
+   ```
+
+## FAQ
+
+### General Questions
+
+#### What is S3U?
+
+S3U is a command-line utility for uploading files to Amazon S3 and generating CloudFront URLs. It provides a streamlined workflow for managing media assets in AWS, with features for optimization, organization, and retrieval.
+
+#### Is S3U open source?
+
+Yes, S3U is open-source software available under the MIT license. You can view, modify, and distribute the code according to the terms of the license.
+
+#### What operating systems does S3U support?
+
+S3U supports Windows, macOS, and Linux. It requires Python 3.8 or higher.
+
+### AWS-Related Questions
+
+#### Do I need an AWS account to use S3U?
+
+Yes, S3U requires an AWS account with an S3 bucket. For full functionality, a CloudFront distribution connected to your S3 bucket is recommended.
+
+#### What AWS permissions do I need?
+
+At minimum, you need these S3 permissions:
+- `s3:PutObject`
+- `s3:GetObject`
+- `s3:ListBucket`
+
+For all features, include these additional permissions:
+- `s3:DeleteObject` (for file management)
+- `cloudfront:CreateInvalidation` (for cache invalidation)
+
+#### Can I use S3U with AWS S3-compatible storage?
+
+S3U is designed primarily for AWS S3, but may work with S3-compatible storage providers that implement the same API. However, CloudFront-specific features will only work with AWS.
+
+### Feature Questions
+
+#### Can S3U handle very large files?
+
+Yes, S3U can handle large files, but there are practical limits:
+- Files up to 5GB can be uploaded directly
+- For optimal performance with large files, reduce concurrency (`-c 3`)
+- Video optimization works best for files under 2GB due to memory constraints
+
+#### Does S3U support folder synchronization?
+
+S3U does not currently support full two-way synchronization. It provides these related features:
+- Upload files to S3 folders
+- Download entire S3 folders
+- Browse existing S3 folders
+
+#### Can I schedule automatic uploads?
+
+S3U itself doesn't include scheduling, but you can use system schedulers like cron (Linux/macOS) or Task Scheduler (Windows) to run S3U commands at specified times.
+
+Example cron job to upload files daily at 2 AM:
+```
+0 2 * * * cd /path/to/files && /usr/local/bin/s3u -q
+```
+
+### Troubleshooting Questions
+
+#### How do I update S3U to the latest version?
+
+Update S3U using pip:
+```bash
+pip install -U s3u
+```
+
+#### Will S3U overwrite existing files?
+
+Yes, if you upload a file with the same name to the same S3 path, it will overwrite the existing file. You can use the rename prefix feature to avoid overwrites.
+
+#### How can I reset my S3U configuration?
+
+Reset your configuration with:
+```bash
+s3u -config reset
+```
+
+Or manually delete the configuration file at:
+- Linux/macOS: `~/.s3u/config.json`
+- Windows: `%APPDATA%\s3u\config.json`
+
+:::tip
+If you encounter issues not covered here, check the [GitHub repository](https://github.com/yourusername/s3u) for the latest troubleshooting information or to report bugs.
+:::

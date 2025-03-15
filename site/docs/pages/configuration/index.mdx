@@ -1,0 +1,456 @@
+---
+layout: docs
+---
+
+# Configuration
+
+S3U includes a powerful configuration system that allows you to customize its behavior to match your workflow. This guide provides detailed information about each configuration option, how to use it, and how it affects S3U's functionality.
+
+## Configuration System
+
+S3U offers a flexible configuration system that makes it easy to customize the tool for your specific needs.
+
+### Viewing Configuration
+
+You can view your current configuration with:
+
+```bash
+s3u -config
+```
+
+This displays all configuration options, their current values, and descriptions:
+
+```
+S3U Configuration
+-----------------
+format: array - Output format for URLs (array, json, xml, html, csv)
+concurrent: 5 - Number of concurrent uploads (1-20)
+optimize: auto - Default behavior for image optimization (auto, always, never)
+...
+```
+
+### Modifying Configuration
+
+There are two ways to modify configuration options:
+
+:::code-group
+
+```bash [Interactive Mode]
+s3u -config format
+```
+
+```bash [Direct Setting]
+s3u -config format json
+```
+
+:::
+
+The interactive mode allows you to select from available options using arrow keys (when supported), while the direct setting immediately sets the option to the specified value.
+
+### Configuration File
+
+All settings are stored in `~/.s3u/config.json`. While you can edit this file directly, using the `-config` command is recommended as it validates your inputs.
+
+```json
+{
+  "format": "json",
+  "concurrent": 10,
+  "optimize": "auto",
+  "size": "optimized",
+  "rename_mode": "replace",
+  "image_format": "webp",
+  "video_format": "mp4",
+  "optimize_videos": "no",
+  "video_preset": "medium",
+  "max_workers": 4,
+  "remove_audio": "no",
+  "subfolder_mode": "ignore",
+  "aws_profile": "",
+  "bucket_name": "my-image-bucket",
+  "cloudfront_url": "https://d1lbnboj0lfh6w.cloudfront.net",
+  "region": "us-west-2",
+  "setup_complete": true
+}
+```
+
+:::tip
+You can reset all settings to their defaults with:
+
+```bash
+s3u -config reset
+```
+
+:::
+
+## Output Formats
+
+S3U can provide your upload results in different formats, making it easy to integrate with various workflows.
+
+### format
+
+Controls the format of CloudFront URLs copied to your clipboard after upload or when browsing folders.
+
+| Value             | Description                        |
+| ----------------- | ---------------------------------- |
+| `array` (default) | Simple JSON array of URLs          |
+| `json`            | JSON object with detailed metadata |
+| `xml`             | XML document with metadata         |
+| `html`            | HTML document with clickable links |
+| `csv`             | CSV file with URLs and metadata    |
+
+**Example Usage**:
+
+```bash
+s3u -config format json
+```
+
+**When to Change**:
+
+- Use `array` for simplicity and easy integration with scripts
+- Use `json` when you need detailed metadata about the files
+- Use `html` when sharing links with non-technical users
+- Use `csv` for importing into spreadsheets or data analysis tools
+- Use `xml` for integration with systems that require XML
+
+Here's an example of the JSON format output:
+
+```json
+{
+  "folder": "vacation_photos",
+  "count": 2,
+  "timestamp": "2023-08-15T14:22:33.456789",
+  "files": [
+    {
+      "url": "https://d1lbnboj0lfh6w.cloudfront.net/vacation_photos/beach.jpg",
+      "filename": "beach.jpg",
+      "s3_path": "vacation_photos/beach.jpg",
+      "size": 245678,
+      "last_modified": "2023-08-15T14:20:12.345678",
+      "type": "jpg"
+    },
+    {
+      "url": "https://d1lbnboj0lfh6w.cloudfront.net/vacation_photos/sunset.jpg",
+      "filename": "sunset.jpg",
+      "s3_path": "vacation_photos/sunset.jpg",
+      "size": 312456,
+      "last_modified": "2023-08-15T14:21:45.678901",
+      "type": "jpg"
+    }
+  ]
+}
+```
+
+## Performance Options
+
+These settings control how S3U performs uploads and media optimization, allowing you to balance speed with resource usage.
+
+### concurrent
+
+Sets the default number of concurrent uploads to S3, affecting upload speed.
+
+**Allowed Values**: 1-20 (default: 5)
+
+**Example Usage**:
+
+```bash
+s3u -config concurrent 10
+```
+
+**Effect**: Controls how many files are uploaded simultaneously. Higher values can significantly speed up uploads of many small files, but may not help (or could even slow down) uploads of a few large files.
+
+:::info
+For single sessions, you can override this setting:
+
+```bash
+s3u -c 15
+```
+
+:::
+
+::::steps
+
+### Use Lower Concurrency (3-5) When:
+
+- Uploading large files (videos, high-res images)
+- Working with limited bandwidth
+- Experiencing connection errors or timeouts
+
+### Use Higher Concurrency (10-15) When:
+
+- Uploading many small files
+- Using high-bandwidth connections
+- Needing maximum throughput
+  ::::
+
+### max_workers
+
+Controls the number of parallel workers used for media optimization.
+
+**Allowed Values**: 1-16 (default: 4)
+
+**Example Usage**:
+
+```bash
+s3u -config max_workers 8
+```
+
+**Effect**: Determines how many image or video optimization tasks run simultaneously. Higher values can speed up the optimization process but use more CPU and memory.
+
+:::warning
+Video transcoding is particularly CPU-intensive. If your system becomes unresponsive during video optimization, try reducing this value.
+:::
+
+## Media Optimization Options
+
+These settings control how S3U optimizes images and videos before uploading them to S3.
+
+### optimize
+
+Sets the default behavior for image optimization.
+
+| Value            | Description                                      |
+| ---------------- | ------------------------------------------------ |
+| `auto` (default) | Ask during interactive mode                      |
+| `always`         | Always optimize images without asking            |
+| `never`          | Never optimize images, just upload the originals |
+
+**Example Usage**:
+
+```bash
+s3u -config optimize always
+```
+
+### size
+
+Determines the default size setting for image optimization.
+
+| Value                 | Description    | Max Width |
+| --------------------- | -------------- | --------- |
+| `optimized` (default) | High quality   | 1920px    |
+| `small`               | Medium quality | 1080px    |
+| `tiny`                | Low quality    | 640px     |
+
+**Example Usage**:
+
+```bash
+s3u -config size small
+```
+
+:::info
+If the original image is smaller than the maximum width, it won't be enlarged. The height is automatically calculated to maintain the aspect ratio.
+:::
+
+### image_format
+
+Sets the default output format for optimized images.
+
+| Value            | Description                                  |
+| ---------------- | -------------------------------------------- |
+| `webp` (default) | Modern format with excellent compression     |
+| `jpg`            | Maximum compatibility                        |
+| `avif`           | Best compression but limited browser support |
+
+**Example Usage**:
+
+```bash
+s3u -config image_format jpg
+```
+
+The format comparison:
+
+- WebP offers ~30% smaller files than JPEG at equivalent quality
+- AVIF offers ~50% smaller files than JPEG but has limited tool and browser support
+
+### Video Optimization Settings
+
+S3U includes several options for optimizing video files:
+
+:::code-group
+
+```bash [Enable Video Optimization]
+s3u -config optimize_videos yes
+```
+
+```bash [Set Video Format]
+s3u -config video_format webm
+```
+
+```bash [Change Encoding Preset]
+s3u -config video_preset slow
+```
+
+```bash [Remove Audio (pATCHES mode)]
+s3u -config remove_audio yes
+```
+
+:::
+
+**Video Format Options**:
+
+- `mp4` (default): Standard format with H.264 codec, excellent compatibility
+- `webm`: Better compression with VP9 codec, less compatibility
+
+**Video Preset Options**:
+
+- `fast`: Quicker encoding but larger files
+- `medium` (default): Balanced approach
+- `slow`: Smaller files but slower encoding
+
+:::tip
+For web delivery, the `mp4` format ensures maximum compatibility across devices and browsers, while `webm` offers better compression for modern browsers.
+:::
+
+## File Management Options
+
+These settings control how S3U handles files during the upload process.
+
+### rename_mode
+
+Controls how rename prefixes are applied to filenames.
+
+| Value               | Description                                    | Example with prefix "vacation" |
+| ------------------- | ---------------------------------------------- | ------------------------------ |
+| `replace` (default) | Replace original filenames with prefix + index | beach.jpg → vacation_001.jpg   |
+| `prepend`           | Add prefix before original filename            | beach.jpg → vacation_beach.jpg |
+| `append`            | Add prefix after original filename             | beach.jpg → beach_vacation.jpg |
+
+**Example Usage**:
+
+```bash
+s3u -config rename_mode prepend
+```
+
+### subfolder_mode
+
+Determines how subfolders in the upload directory are handled.
+
+| Value              | Description                                               |
+| ------------------ | --------------------------------------------------------- |
+| `ignore` (default) | Only upload files in the main directory                   |
+| `pool`             | Combine all files from subfolders into the main S3 folder |
+| `preserve`         | Maintain the subfolder structure in S3                    |
+
+**Example Usage**:
+
+```bash
+s3u -config subfolder_mode preserve
+```
+
+:::warning
+When using `pool` mode, files from all subfolders are flattened into the destination folder. This may cause filename conflicts if different subfolders contain files with the same name.
+:::
+
+For a single session, you can override this setting:
+
+```bash
+s3u -sf preserve
+```
+
+## AWS Configuration Options
+
+These settings control how S3U interacts with AWS services.
+
+### aws_profile
+
+Specifies which AWS profile to use for S3 operations.
+
+**Allowed Values**: Any profile name configured in your AWS credentials file (default: "" - use default profile)
+
+**Example Usage**:
+
+```bash
+s3u -config aws_profile production
+```
+
+### bucket_name
+
+Specifies the S3 bucket to use for all operations.
+
+**Example Usage**:
+
+```bash
+s3u -config bucket_name my-website-assets
+```
+
+### cloudfront_url
+
+Sets the CloudFront distribution URL associated with your S3 bucket.
+
+**Example Usage**:
+
+```bash
+s3u -config cloudfront_url https://d1example123.cloudfront.net
+```
+
+:::info
+The CloudFront distribution should be configured to use your S3 bucket as its origin.
+:::
+
+### region
+
+Specifies the AWS region for your S3 bucket.
+
+**Example Usage**:
+
+```bash
+s3u -config region eu-west-1
+```
+
+## Example Configurations
+
+S3U can be configured for different workflows. Here are some example configurations:
+
+::::steps
+
+### Photography Workflow
+
+Optimized for photographers uploading large batches of images:
+
+```bash
+s3u -config format json
+s3u -config concurrent 8
+s3u -config optimize always
+s3u -config size optimized
+s3u -config image_format webp
+s3u -config rename_mode replace
+s3u -config max_workers 8
+```
+
+### Web Development
+
+Ideal for web developers preparing assets for websites:
+
+```bash
+s3u -config format html
+s3u -config concurrent 10
+s3u -config optimize always
+s3u -config size small
+s3u -config image_format webp
+s3u -config rename_mode prepend
+s3u -config subfolder_mode preserve
+```
+
+### Video Production
+
+Configured for video content creators:
+
+```bash
+s3u -config format json
+s3u -config concurrent 3
+s3u -config optimize always
+s3u -config optimize_videos yes
+s3u -config video_format mp4
+s3u -config video_preset slow
+s3u -config max_workers 12
+```
+
+::::
+
+:::tip
+After setting up a configuration for your workflow, you can verify it with:
+
+```bash
+s3u -config
+```
+
+:::

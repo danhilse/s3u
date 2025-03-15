@@ -1,55 +1,103 @@
-# s3u - S3 Upload Utility
+# S3U - S3 Upload Utility
 
-An interactive command-line tool for optimizing images, uploading files (including videos) to S3 with CloudFront URL generation.
+[![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Features
+An interactive command-line tool for optimizing images, uploading files to S3, and generating CloudFront URLs with advanced capabilities for media management.
 
-- Interactive interface - no need to remember complex flags
-- Tab completion for S3 folder names
-- Image optimization using FFmpeg (three size options)
-- Video file support (MP4, MOV)
-- Filter files by extension
-- Batch upload to S3 with async/concurrent uploads
-- Flexible file renaming (replace, prepend, append modes)
-- CloudFront URL generation
-- Clipboard integration for easy URL sharing
-- Browse existing S3 folders and get CDN links
-- Download files from S3 folders with progress tracking
-- List all folders with item counts
-- Smart handling of existing folders
-- Limit file counts for downloads and browsing
-- Persistent configuration system with arrow key selection
-- Multiple output formats (JSON, XML, HTML, CSV)
-- Flexible subfolder handling (ignore, pool files, or preserve structure)
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/placeholder/s3u-logo.png" alt="S3U Logo" width="200"/>
+</p>
 
-## Requirements
+## 🚀 Quick Start
+
+```bash
+# Install the package
+pip install s3u
+
+# First-time setup
+s3u -setup
+
+# Upload files (interactive mode)
+s3u
+
+# List all folders in your bucket
+s3u -ls
+
+# Download a folder
+s3u -d folder_name
+```
+
+## 📖 Documentation
+
+S3U now comes with comprehensive documentation:
+
+- [User Guide](docs/s3u-user-guide.md) - Complete overview of features and usage
+- [Configuration Guide](docs/s3u-configuration-guide.md) - Detailed settings explanations
+- [Utility Functions Guide](docs/s3u-utility-functions-guide.md) - Non-upload functionality
+- [Core Uploading Guide](docs/s3u-upload-guide.md) - Detailed upload process explanation
+- [AWS Setup Guide](docs/aws-setup-guide.md) - Setting up required AWS resources
+
+## ✨ Features
+
+### Core Functionality
+- 🔄 **Interactive interface** - No need to remember complex flags
+- 🖼️ **Image optimization** - Resize and compress images using FFmpeg
+- 🎥 **Video support** - Upload and transcode video files (MP4, MOV)
+- 📂 **Batch uploads** - Process multiple files with concurrent transfers
+- 🔗 **CloudFront integration** - Generate CDN URLs automatically
+- 📋 **Clipboard integration** - Copy URLs directly to clipboard
+
+### Advanced Features
+- 🔍 **Tab completion** for S3 folder names
+- 📱 **Multiple output formats** (JSON, XML, HTML, CSV)
+- 🗂️ **Subfolder handling** (ignore, pool, or preserve)
+- 📥 **Folder downloads** with progress tracking
+- 📋 **Browse existing content** and get CDN links
+- 📊 **Folder listing** with item counts
+- ⚙️ **Persistent configuration system** with arrow key selection
+
+## 📋 Requirements
 
 - Python 3.7+
-- FFmpeg and FFprobe (for image optimization)
+- FFmpeg and FFprobe (for image and video optimization)
 - AWS credentials configured in your environment
 
-## Installation
+## 🛠️ Installation
+
+### From PyPI (Recommended)
+
+```bash
+pip install s3u
+```
+
+### From Source
 
 ```bash
 # Clone the repository
 git clone https://github.com/yourusername/s3u.git
 cd s3u
 
-# Install the package
+# Install in development mode
 pip install -e .
 ```
 
-## Usage
+## 💻 Usage
 
 ### Interactive Mode
 
-Simply run the command and follow the interactive prompts:
+Simply run the command and follow the prompts:
 
 ```bash
 s3u
 ```
 
-During the folder selection step, press Tab to see existing folders and autocomplete folder names.
+S3U will guide you through:
+1. Selecting file types to include
+2. Optional image optimization
+3. Destination folder selection (with tab completion)
+4. File renaming options
+5. Upload configuration
 
 ### Command Line Options
 
@@ -57,181 +105,77 @@ During the folder selection step, press Tab to see existing folders and autocomp
 # Upload with 15 concurrent connections
 s3u -c 15
 
-# Get all CDN links from an existing folder in the bucket
-s3u -b mj_watercolors
+# Get CDN links from a folder
+s3u -b folder_name
 
-# Get only 12 CDN links from a folder
-s3u -b mj_watercolors 12
-
-# List all folders in the bucket with item counts
+# List all folders in your bucket
 s3u -ls
 
-# Download all files from a folder
-s3u -d mj_watercolors
+# Download files from a folder
+s3u -d folder_name
 
-# Download only 5 files from a folder
-s3u -d mj_watercolors 5
-
-# Download files to a specific directory
-s3u -d mj_watercolors -o ./downloaded_images
-
-# Download 10 files to a specific directory
-s3u -d mj_watercolors 10 -o ./downloaded_images
-
-# Specify how to handle subfolders
-s3u -sf preserve
-
-# Download files recursively including subfolders
-s3u -d mj_watercolors -sf preserve
+# Quick mode (uses default settings)
+s3u -q
 ```
+
+See the [User Guide](docs/s3u-user-guide.md) for a complete list of command line options.
 
 ### Configuration System
 
-s3u includes a persistent configuration system that allows you to set default values for various options.
+S3U includes a persistent configuration system:
 
 ```bash
 # Show current configuration
 s3u -config
 
-# Configure a specific option interactively using arrow keys
+# Configure an option interactively
 s3u -config format
 
-# Set a specific option directly
+# Set an option directly
 s3u -config format json
-
-# Show all configuration values
-s3u -config show
 ```
-
-#### Interactive Configuration
-
-When configuring options interactively, you can use arrow keys to select from available options:
-
-```
-Configuring: format
-Description: Output format for generated URLs
-Current value: array
-Use arrow keys to select an option, Enter to confirm:
-❯ array
-  json
-  xml
-  html
-  csv
-```
-
-Simply navigate to your preferred option using arrow keys and press Enter to select it.
 
 #### Available Configuration Options
 
 | Option | Description | Allowed Values | Default |
 |--------|-------------|----------------|---------|
-| format | Output format for generated URLs | array, json, xml, html, csv | array |
-| concurrent | Default number of concurrent uploads | 1-20 | 5 |
-| optimize | Default image optimization setting | auto, always, never | auto |
-| size | Default optimization size | optimized, small, tiny | optimized |
-| rename_mode | How to apply rename prefix to filenames | replace, prepend, append | replace |
-| subfolder_mode | How to handle subfolders when uploading | ignore, pool, preserve | ignore |
+| format | Output format for URLs | array, json, xml, html, csv | array |
+| concurrent | Number of concurrent uploads | 1-20 | 5 |
+| optimize | Image optimization setting | auto, always, never | auto |
+| size | Optimization size | optimized, small, tiny, patches | optimized |
+| rename_mode | How to rename files | replace, prepend, append | replace |
+| subfolder_mode | Subfolder handling | ignore, pool, preserve | ignore |
+| image_format | Image output format | webp, jpg, avif | webp |
+| video_format | Video output format | mp4, webm | mp4 |
 
-#### Output Formats
+See the [Configuration Guide](docs/s3u-configuration-guide.md) for detailed explanations.
 
-The configuration system introduces multiple output formats for the URLs and metadata:
-
-- **array**: Simple JSON array of URLs (default)
-- **json**: JSON object with metadata including file size, type, and timestamps
-- **xml**: XML document with file metadata
-- **html**: HTML document with clickable links
-- **csv**: CSV file format with URL and metadata columns
-
-#### Renaming Modes
-
-The system offers three different ways to apply a rename prefix to your files:
-
-- **replace**: Original filenames are replaced completely with the pattern `prefix_index` (e.g., `vacation_001.jpg`)
-- **prepend**: The prefix is added before the original filename with the pattern `prefix_originalname` (e.g., `vacation_beach.jpg`)
-- **append**: The prefix is added after the original filename with the pattern `originalname_prefix` (e.g., `beach_vacation.jpg`)
-
-### Interactive Options
-
-1. **File extensions** - Specify which file types to include (e.g., "jpg png mp4 mov" or "jpg,png,mp4,mov")
-2. **Image optimization** - Choose whether to optimize images before uploading (skipped for video files)
-3. **Optimization size** - Select from three size options (1920px, 1080px, or 640px)
-4. **S3 folder** - Specify the destination folder in your S3 bucket (press Tab for autocompletion)
-5. **Existing folder handling** - Choose whether to include existing files in CDN links (if folder exists)
-6. **Rename prefix** - Optionally rename files with a common prefix
-7. **Rename mode** - Choose how to apply the rename prefix (replace, prepend, or append)
-8. **Output format** - Choose between output formats for clipboard
-9. **Concurrency** - Optionally enable concurrent uploads for speed
-10. **Subfolder handling** - Choose how to handle subfolders in the upload directory
-
-## Folder Management
-
-### Working with Existing Folders
-
-When uploading to a folder that already exists, you'll be prompted:
-```
-Folder 'your_folder' already exists in S3 bucket.
-Include existing files in CDN links? (y/n) [y]: 
-```
-
-- Answer "y" (default) to include all files (existing + new) in the clipboard output
-- Answer "n" to include only the newly uploaded files in the clipboard output
+## 🗂️ Working with Folders
 
 ### Subfolder Handling
 
-When the tool detects subfolders in your upload directory, you'll be prompted:
-```
-Detected 3 subfolders in the current directory:
-  1. images/products
-  2. images/banners
-  3. backup
-  ... and 2 more
-  
-How to handle subfolders? (1=ignore, 2=pool all files, 3=preserve structure) [1]: 
-```
+S3U offers three modes for handling subfolders:
 
-The three subfolder handling modes work as follows:
-
-- **Ignore (default)**: Only files in the main directory are uploaded
-- **Pool**: Files from all subfolders are combined and uploaded to the main S3 folder
-- **Preserve**: The subfolder structure is preserved in S3, creating matching subfolders
-
-You can specify the subfolder mode via command line with the `-sf` or `--subfolder-mode` flag:
 ```bash
-# Upload preserving subfolder structure
-s3u -sf preserve
+# Only upload files in the current directory
+s3u -sf ignore
 
-# Pool all files from subfolders
+# Combine all files from subfolders
 s3u -sf pool
+
+# Preserve the folder structure in S3
+s3u -sf preserve
 ```
-
-When using the "preserve" mode with existing folders, the `-b` flag will recursively list all files in the folder and subfolders.
-
-### Tab Completion for Folders
-
-When entering a folder name in interactive mode:
-1. The system fetches all existing folder names from S3
-2. Press Tab to see available folders that match what you've typed
-3. Continue typing or press Tab again to cycle through options
-4. This helps ensure you're using a consistent folder structure
-
-### Downloading Folders
-
-When downloading a folder:
-- Progress is displayed with estimated time remaining
-- Files maintain their structure and relative paths
-- The local directory is created if it doesn't exist
-- Optionally limit the number of files downloaded with `s3u -d folder_name 5`
-
-### Browsing Folders
-
-When browsing a folder:
-- All CloudFront URLs are copied to the clipboard in the configured format
-- Optionally limit the number of URLs with `s3u -b folder_name 12`
 
 ### Listing Folders
 
-The `-ls` flag shows a table of all folders in your bucket with item counts:
+List all folders in your S3 bucket:
 
+```bash
+s3u -ls
+```
+
+Example output:
 ```
 Folders in S3 bucket:
 --------------------------------------------------
@@ -244,9 +188,68 @@ watercolors                              37
 Total: 3 folders
 ```
 
-## Configuration File
+### Downloading Folders
 
-The configuration is stored in a JSON file at `~/.s3u/config.json`. You can edit this file directly if needed, but it's recommended to use the `-config` command to ensure proper validation.
+Download content from S3:
+
+```bash
+# Download an entire folder
+s3u -d folder_name
+
+# Download to a specific location
+s3u -d folder_name -o ./downloaded_images
+
+# Limit the number of files
+s3u -d folder_name 10
+```
+
+### Browsing Content
+
+Get CloudFront URLs from existing folders:
+
+```bash
+# Get all URLs from a folder
+s3u -b folder_name
+
+# Get only 12 URLs
+s3u -b folder_name 12
+
+# Include files from subfolders
+s3u -b folder_name -sf preserve
+```
+
+See the [Utility Functions Guide](docs/s3u-utility-functions-guide.md) for more folder operations.
+
+## 🖼️ Media Optimization
+
+S3U can optimize your images and videos before uploading:
+
+### Image Optimization
+
+Three size options are available:
+- **optimized**: 1920px width (high quality)
+- **small**: 1080px width (web quality)
+- **tiny**: 640px width (thumbnail size)
+- **patches**: 1280px width (high compression)
+
+Supported output formats:
+- **WebP**: Best compression-to-quality ratio
+- **JPEG**: Maximum compatibility
+- **AVIF**: Best compression (limited browser support)
+
+### Video Optimization
+
+For video files, S3U supports:
+- Transcoding to MP4 (H.264) or WebM (VP9)
+- Multiple encoding presets (fast, medium, slow)
+- Resolution adjustment
+- Optional audio removal (patches mode)
+
+See the [Core Uploading Guide](docs/s3u-upload-guide.md) for detailed optimization options.
+
+## ⚙️ Configuration File
+
+Settings are stored in `~/.s3u/config.json`. It's recommended to use the `-config` command rather than editing directly.
 
 Example configuration file:
 ```json
@@ -256,18 +259,28 @@ Example configuration file:
     "optimize": "auto",
     "size": "optimized",
     "rename_mode": "replace",
-    "subfolder_mode": "ignore"
+    "subfolder_mode": "ignore",
+    "image_format": "webp",
+    "video_format": "mp4",
+    "bucket_name": "my-uploads",
+    "cloudfront_url": "https://d1example.cloudfront.net"
 }
 ```
 
-## Notes
+## 📝 Notes
 
-- The tool uses AWS credentials from your environment
-- CloudFront distribution URL is hardcoded to "https://d1lbnboj0lfh6w.cloudfront.net"
-- Image optimization requires FFmpeg and FFprobe installed on your system
-- Video files (MP4, MOV) are supported but not optimized
-- Downloads and folder listings use the same AWS credentials and bucket settings
-- When limiting file counts, files are processed in alphabetical order
-- Tab completion requires the readline module, which is standard in most Python installations
-- Configuration settings are stored in the user's home directory and persist between sessions
+- S3U uses AWS credentials from your environment (via AWS CLI or environment variables)
+- Image and video optimization requires FFmpeg and FFprobe
+- Tab completion requires the readline module
 - Arrow key selection for configuration requires the questionary package (included in dependencies)
+- Files are processed in alphabetical order when limiting counts
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+---

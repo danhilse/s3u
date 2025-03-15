@@ -1,0 +1,398 @@
+---
+layout: docs
+---
+
+# Core Uploading
+
+The upload functionality is the heart of S3U, designed to efficiently transfer files to Amazon S3 and generate CloudFront URLs.
+
+## Interactive Upload Process
+
+S3U provides an intuitive interactive workflow that guides you through the upload process:
+
+```bash
+$ s3u
+
+S3 Upload Utility
+-----------------
+
+File extensions to include:
+  • Enter 'all' or leave blank for all files (default)
+  • Enter specific types separated by spaces or commas (e.g., 'jpg png mp4')
+  • Or use one of these groups:
+    - images: jpg, jpeg, png, gif, webp, svg
+    - videos: mp4, mov, avi, webm, mkv
+    - documents: pdf, doc, docx, txt, md
+Extensions [all]: images
+
+Using images group: jpg, jpeg, png, gif, webp, svg
+Optimize media before uploading? (y/n) [n]: y
+
+Select size (1=optimized [1920px], 2=small [1080px], 3=tiny [640px], 4=pATCHES [1280px, high compression]) [1]: 2
+
+Image format (1=webp [recommended], 2=jpg [compatible], 3=avif [best compression]) [1]: 1
+
+Parallel optimization workers (1-16, higher=faster) [4]: 4
+
+Enter folder name (press Tab to see existing folders)
+S3 folder name [current_directory]: vacation_photos
+
+Rename prefix (optional, press Enter to skip): beach_trip
+
+Proceed with upload? (y/n) [y]: y
+```
+
+The interactive process follows these steps:
+
+1. **Initialization**: Verify AWS credentials and S3 bucket
+2. **File Selection**: Identify files to upload based on extensions
+3. **File Preparation**: Optionally rename files and/or optimize media
+4. **Folder Preparation**: Create or verify the destination S3 folder
+5. **Upload Execution**: Transfer files to S3 with concurrent uploads
+6. **URL Generation**: Create CloudFront URLs for uploaded files
+7. **Output**: Copy URLs to clipboard in the configured format
+
+:::info
+You can bypass the interactive process using the quick mode (`s3u -q`) or by specifying options directly via command-line arguments (`s3u -c 15 -sf preserve`).
+:::
+
+## Media Optimization
+
+S3U can automatically optimize your media files before uploading them to S3, resulting in faster uploads and lower storage costs.
+
+### Image Optimization Options
+
+When selecting image optimization, you'll have these options:
+
+1. **Size Options**:
+
+   - **Optimized** (1920px): Best for high-quality website images
+   - **Small** (1080px): Ideal for general web usage
+   - **Tiny** (640px): Perfect for thumbnails and previews
+   - **pATCHES** (1280px): Special high-compression mode
+
+2. **Format Options**:
+   - **WebP** (recommended): Modern format with excellent compression
+   - **JPG** (compatible): Maximum compatibility across all browsers
+   - **AVIF** (best compression): Newest format with smallest file sizes
+
+### Parallel Processing
+
+S3U uses multiple workers to speed up the optimization process:
+
+```
+Parallel optimization workers (1-16, higher=faster) [4]: 8
+
+Starting media optimization...
+Successfully optimized 15 files in ./optimized/small
+```
+
+Higher values process files faster but use more system resources.
+
+## Concurrent Uploads
+
+S3U dramatically improves performance by uploading multiple files simultaneously using asynchronous programming.
+
+### How Concurrency Works
+
+1. A semaphore controls the maximum number of simultaneous uploads
+2. Each file upload runs as an independent task
+3. The system automatically balances resources and network connections
+
+### Setting Concurrency
+
+You can set the concurrency level in several ways:
+
+1. **Command-line flag** (for a single session):
+
+   ```bash
+   s3u -c 15
+   ```
+
+2. **Configuration** (persistent setting):
+
+   ```bash
+   s3u -config concurrent 10
+   ```
+
+3. **Interactive prompt** (if not using other methods)
+
+### Optimal Concurrency Values
+
+The ideal concurrency depends on your network and file sizes:
+
+- **Large files** (videos, high-res images): 3-5 concurrent uploads
+- **Medium files** (regular images, documents): 5-10 concurrent uploads
+- **Small files** (tiny images, text files): 10-20 concurrent uploads
+- **Slow connections**: Lower values (3-5) to avoid timeouts
+- **Fast connections**: Higher values (10-15) for maximum throughput
+
+:::tip
+Monitor upload speeds during the process. If you see frequent slowdowns or timeouts, reduce the concurrency value.
+:::
+
+## Subfolder Handling
+
+S3U provides three ways to handle local subfolders during upload:
+
+### Ignore Mode (Default)
+
+Only uploads files from the current directory:
+
+```bash
+s3u -sf ignore
+```
+
+- Files in subfolders are skipped
+- Simplest approach for flat file structures
+
+### Pool Mode
+
+Combines all files from all subfolders into a single S3 folder:
+
+```bash
+s3u -sf pool
+```
+
+- Files from all subfolders are "flattened" into the destination folder
+- Useful for consolidating content from multiple directories
+- Warning: May cause filename conflicts if different subfolders contain files with the same name
+
+### Preserve Mode
+
+Maintains your local folder structure in S3:
+
+```bash
+s3u -sf preserve
+```
+
+- Creates matching subfolder structure in S3
+- Most organized approach for complex file hierarchies
+- Ideal for websites and structured content
+
+::::steps
+
+### Example: Ignore Mode (Default)
+
+Consider this local directory structure:
+
+```
+project/
+├── images/
+│   ├── logo.png
+│   └── banner.jpg
+├── documents/
+│   └── spec.pdf
+└── README.md
+```
+
+With **Ignore mode**, only `README.md` is uploaded
+
+### Example: Pool Mode
+
+With the same directory structure, using **Pool mode**:
+
+All files are uploaded to the same S3 folder (`logo.png`, `banner.jpg`, `spec.pdf`, `README.md`)
+
+### Example: Preserve Mode
+
+With the same directory structure, using **Preserve mode**:
+
+Files are uploaded to matching S3 subfolders:
+
+```
+project/
+├── images/logo.png
+├── images/banner.jpg
+├── documents/spec.pdf
+└── README.md
+```
+
+::::
+
+:::warning
+Be careful when using Pool mode with directories containing similarly named files, as this could result in newer uploads overwriting older files.
+:::
+
+## Progress Tracking
+
+S3U provides detailed progress information during uploads to keep you informed:
+
+### Per-File Progress
+
+For each file being uploaded, S3U shows:
+
+```
+Uploading beach_sunset.jpg: 78.5% | 2.45 MB/s | ETA: 12s
+```
+
+This display includes:
+
+1. **Percentage complete**: How much of the file has been uploaded
+2. **Upload speed**: Current transfer rate in B/s, KB/s, or MB/s
+3. **ETA**: Estimated time remaining for the current file
+
+### Overall Progress
+
+After all uploads complete, you'll see a summary:
+
+```
+Completed 15 of 15 uploads
+Including existing files in the CDN links...
+Total of 23 files in folder (new + existing)
+```
+
+:::info
+S3U automatically handles error recovery. If an upload fails, it will attempt to continue with the remaining files rather than aborting the entire batch.
+:::
+
+## Post-Upload Actions
+
+After uploading files, S3U performs these actions:
+
+### URL Generation
+
+S3U generates CloudFront URLs for all uploaded files:
+
+```
+https://d1lbnboj0lfh6w.cloudfront.net/vacation_photos/beach_001.jpg
+```
+
+These URLs provide fast, edge-cached access to your content.
+
+### Clipboard Integration
+
+URLs are automatically copied to your clipboard in the format specified by your configuration:
+
+:::code-group
+
+```json [Array Format (Default)]
+[
+  "https://d1lbnboj0lfh6w.cloudfront.net/folder/file1.jpg",
+  "https://d1lbnboj0lfh6w.cloudfront.net/folder/file2.jpg"
+]
+```
+
+```json [JSON Format]
+{
+  "folder": "vacation_photos",
+  "count": 2,
+  "timestamp": "2023-08-15T14:22:33.456789",
+  "files": [
+    {
+      "url": "https://d1lbnboj0lfh6w.cloudfront.net/folder/file1.jpg",
+      "filename": "file1.jpg",
+      "s3_path": "folder/file1.jpg",
+      "size": 245678,
+      "last_modified": "2023-08-15T14:20:12.345678",
+      "type": "jpg"
+    },
+    ...
+  ]
+}
+```
+
+:::
+
+To get only the first URL (useful for single file uploads):
+
+```bash
+s3u -f
+```
+
+## Advanced Options
+
+S3U provides several advanced options for customizing the upload process:
+
+### Media Optimization
+
+Before uploading, S3U can optimize images and videos:
+
+```bash
+s3u -config optimize always
+```
+
+### File Renaming
+
+S3U offers flexible file renaming options:
+
+```bash
+s3u -config rename_mode prepend
+```
+
+### Custom Output Formats
+
+Control how URLs are formatted and copied to the clipboard:
+
+```bash
+s3u -config format json
+```
+
+:::tip
+See the [Configuration](../configuration/) section for more details on these advanced options.
+:::
+
+## Troubleshooting
+
+Common upload issues and solutions:
+
+### "Access Denied" Errors
+
+**Cause**: Insufficient IAM permissions
+
+**Solution**: Verify your IAM policy includes:
+
+```json
+{
+  "Effect": "Allow",
+  "Action": ["s3:PutObject", "s3:ListBucket"],
+  "Resource": [
+    "arn:aws:s3:::your-bucket-name",
+    "arn:aws:s3:::your-bucket-name/*"
+  ]
+}
+```
+
+### Slow Uploads
+
+**Cause**: Network limitations or excessive concurrency
+
+**Solution**:
+
+- Reduce concurrency with `s3u -c 5`
+- Check your network connection
+- Consider optimizing large media files before upload
+
+### Failed Uploads with Timeout
+
+**Cause**: Network interruptions or very large files
+
+**Solution**:
+
+- Reduce concurrency
+- Try uploading files individually
+- Check for firewall or proxy issues
+
+### "No Files to Upload" Message
+
+**Cause**: No matching files or incorrect extension filter
+
+**Solution**:
+
+- Check the file extensions you specified
+- Verify files exist in the current directory
+- Try using `all` for extensions to include all files
+
+### CloudFront URLs Not Working
+
+**Cause**: CloudFront distribution not properly configured or deployed
+
+**Solution**:
+
+- Verify your CloudFront distribution is enabled
+- Check the Origin settings in CloudFront
+- Wait for CloudFront propagation (can take 15-30 minutes)
+
+:::success
+For additional troubleshooting help, see the [Reference](../reference/) section.
+:::

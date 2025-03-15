@@ -91,16 +91,65 @@ def get_input(prompt, default=None):
     value = input(prompt).strip()
     return value if value else default
 
+# Define common extension groups for easy selection
+EXTENSION_GROUPS = {
+    "images": ["jpg", "jpeg", "png", "gif", "webp", "svg"],
+    "videos": ["mp4", "mov", "avi", "webm", "mkv"],
+    "documents": ["pdf", "doc", "docx", "txt", "md"],
+}
+
 def parse_extensions(extensions_input):
-    """Parse comma or space separated extensions."""
-    if not extensions_input:
-        return None
+    """
+    Parse file extensions input and return a normalized list.
     
-    # Handle both comma-separated and space-separated inputs
-    if ',' in extensions_input:
-        return [ext.strip() for ext in extensions_input.split(',') if ext.strip()]
+    Args:
+        extensions_input (str): Input string with extensions
+        
+    Returns:
+        list or None: List of normalized extensions or None for all files
+    """
+    # Check for empty input or explicit "all" keyword
+    if not extensions_input or extensions_input.lower() == "all":
+        return None  # None represents all files
+    
+    # Check if input is a predefined extension group
+    if extensions_input.lower() in EXTENSION_GROUPS:
+        return EXTENSION_GROUPS[extensions_input.lower()]
+    
+    # Replace commas with spaces for consistent splitting
+    normalized_input = extensions_input.replace(',', ' ')
+    
+    # Split by spaces and normalize each extension
+    extensions = []
+    for ext in normalized_input.split():
+        # Remove leading dots if present and convert to lowercase
+        ext = ext.lstrip('.').lower().strip()
+        if ext:  # Only add non-empty extensions
+            extensions.append(ext)
+    
+    return extensions if extensions else None
+
+def get_extensions_input():
+    """Get file extensions with helpful suggestions."""
+    print("\nFile extensions to include:")
+    print("  • Enter 'all' or leave blank for all files (default)")
+    print("  • Enter specific types separated by spaces or commas (e.g., 'jpg png mp4')")
+    print("  • Or use one of these groups:")
+    for group, exts in EXTENSION_GROUPS.items():
+        print(f"    - {group}: {', '.join(exts)}")
+    
+    extensions_input = get_input("Extensions", "all")
+    extensions = parse_extensions(extensions_input)
+    
+    # Provide feedback about what extensions will be used
+    if extensions is None:
+        print("Using all file types")
+    elif extensions_input.lower() in EXTENSION_GROUPS:
+        print(f"Using {extensions_input.lower()} group: {', '.join(extensions)}")
     else:
-        return [ext.strip() for ext in extensions_input.split() if ext.strip()]
+        print(f"Using extensions: {', '.join(extensions)}")
+    
+    return extensions
 
 def scan_for_subfolders(directory):
     """
@@ -183,12 +232,16 @@ async def main():
     parser.add_argument("-ls", "--list", action="store_true", help="List all folders in the bucket with item count")
     parser.add_argument("-config", nargs="*", metavar="OPTION [VALUE]", help="Configure persistent settings (use without args to show all options)")
     parser.add_argument("-setup", action="store_true", help="Run the setup wizard to configure S3U")
+    parser.add_argument("-q", "--quick", action="store_true", help="Quick mode: skip all prompts and use default settings with folder 'default'")
     parser.add_argument("count", nargs="?", type=int, help="Optional number of files to process (for -b or -d)")
     parser.add_argument("-f", "--first", action="store_true", help="Copy only the first URL to clipboard")
     parser.add_argument("-sf", "--subfolder-mode", choices=["ignore", "pool", "preserve"], 
                         help="How to handle subfolders: ignore, pool, or preserve")
     parser.add_argument("path", nargs="?", help="Path to the directory containing files to upload")
     args = parser.parse_args()
+    
+    # Check if quick mode is enabled
+    quick_mode = args.quick
     
     # Handle the setup flag first
     if args.setup:
@@ -278,191 +331,40 @@ async def main():
     # Get current directory name as default folder name
     current_dir = os.path.basename(os.path.abspath('.'))
     
-    print("S3 Upload Utility")
-    print("-----------------")
+    # Use command line argument if provided, otherwise use config value
+    # concurrent = args.concurrent or config.get('concurrent', 5)
     
+    concurrent = args.concurrent or config.get('concurrent', 5)
+
     
-    # Get file extensions
-    extensions_input = get_input("File extensions to include (e.g., jpg png mp4 mov or jpg,png,mp4,mov)")
-    extensions = parse_extensions(extensions_input)
-    
-    # Check if only video extensions are specified
-    only_videos = False
-    if extensions:
-        video_extensions = ['mp4', 'mov']
-        only_videos = all(ext.lower() in video_extensions for ext in extensions)
-    
-    # Check for subfolders
-    subfolders = scan_for_subfolders('.')
-    has_subfolders = len(subfolders) > 0
-    
-    # Determine subfolder mode
-    if args.subfolder_mode:
-        # Use command line argument if provided
-        subfolder_mode = args.subfolder_mode
-        if has_subfolders:
-            print(f"Using subfolder mode '{subfolder_mode}' from command line")
-    elif has_subfolders:
-        # If subfolders are found, ask how to handle them
-        print(f"\nDetected {len(subfolders)} subfolders in the current directory:")
-        for i, subfolder in enumerate(subfolders[:5], 1):  # Show first 5 only
-            print(f"  {i}. {subfolder}")
-        if len(subfolders) > 5:
-            print(f"  ... and {len(subfolders) - 5} more")
+    if quick_mode:
+        print("S3 Upload Utility (Quick Mode)")
+        print("-----------------------------")
+        print("Using default settings...")
         
-        # Use config setting as default
-        subfolder_mode_config = config.get('subfolder_mode', 'ignore')
+        # Use default values for all settings in quick mode
+        extensions = None  # All files
+        folder = "default"
+        include_existing = False
+        rename_prefix = ""
+        subfolder_mode = args.subfolder_mode or config.get('subfolder_mode', 'ignore')
         
-        subfolder_options = {
-            '1': 'ignore',   # Ignore subfolders
-            '2': 'pool',     # Combine all files
-            '3': 'preserve'  # Preserve structure
-        }
+        # Use config settings for optimization
+        optimize = config.get('optimize', 'auto') == 'always'
+        optimize_size = config.get('size', 'optimized')
+        image_format = config.get('image_format', 'webp')
+        video_format = config.get('video_format', 'mp4')
+        video_preset = config.get('video_preset', 'medium')
+        optimize_videos = config.get('optimize_videos', 'no') == 'yes'
+        max_workers = config.get('max_workers', 4)
+        remove_audio = config.get('remove_audio', 'no') == 'yes'
         
-        # Map config to option number
-        default_option = '1'  # Default to ignore
-        for opt, mode in subfolder_options.items():
-            if mode == subfolder_mode_config:
-                default_option = opt
-                
-        mode_prompt = "How to handle subfolders? (1=ignore, 2=pool all files, 3=preserve structure)"
-        mode_choice = get_input(mode_prompt, default_option)
-        subfolder_mode = subfolder_options.get(mode_choice, subfolder_mode_config)
+        # Other settings from config
+        rename_mode = config.get('rename_mode', 'replace')
+        selected_format = config.get('format', 'array')
         
-        print(f"Subfolder mode: {subfolder_mode}")
-    else:
-        # Use the default from config
-        subfolder_mode = config.get('subfolder_mode', 'ignore')
-    
-    # =============== OPTIMIZATION SETTINGS COLLECTION ===============
-    # Collect optimization settings but DON'T run optimization yet
-    
-    optimize = False
-    optimize_size = None
-    image_format = None
-    video_format = None
-    video_preset = None
-    optimize_videos = False
-    max_workers = None
-    remove_audio = False
-    optimization_options = None
-    
-    if not only_videos:
-        # Use config setting for optimize
-        optimize_config = config.get('optimize', 'auto')
-        
-        if optimize_config == 'always':
-            optimize = True
-            print("Media optimization enabled (based on config)")
-        elif optimize_config == 'never':
-            optimize = False
-            print("Media optimization disabled (based on config)")
-        else:  # 'auto'
-            optimize = get_input("Optimize media before uploading? (y/n)", "n").lower() == 'y'
-        
+        # Prepare optimization options if optimization is enabled
         if optimize:
-            # Get default size from config
-            default_size = config.get('size', 'optimized')
-            
-            # Ask which optimization size to use
-            size_options = {
-                '1': 'optimized',  # 1920px
-                '2': 'small',      # 1080px
-                '3': 'tiny',       # 640px
-                '4': 'patches'     # 1280px with higher compression
-            }
-            
-            # Determine the default choice based on the config
-            default_choice = '1'  # Default to 'optimized'
-            for choice, size in size_options.items():
-                if size == default_size:
-                    default_choice = choice
-            
-            size_choice = get_input(f"Select size (1=optimized [1920px], 2=small [1080px], 3=tiny [640px], 4=pATCHES [1280px, high compression])", default_choice)
-            optimize_size = size_options.get(size_choice, default_size)
-            
-            # Get image format preference
-            default_image_format = config.get('image_format', 'webp')
-            image_format_options = {
-                '1': 'webp',  # WebP (good balance)
-                '2': 'jpg',   # JPEG (most compatible)
-                '3': 'avif'   # AVIF (best compression)
-            }
-            
-            # Map config format to option number
-            default_format_choice = '1'  # Default to WebP
-            for opt, fmt in image_format_options.items():
-                if fmt == default_image_format:
-                    default_format_choice = opt
-            
-            format_prompt = "Image format (1=webp [recommended], 2=jpg [compatible], 3=avif [best compression])"
-            image_format_choice = get_input(format_prompt, default_format_choice)
-            image_format = image_format_options.get(image_format_choice, default_image_format)
-            
-            # Check if there are video files in the extensions
-            video_extensions = ['mp4', 'mov', 'avi', 'mkv', 'webm']
-            has_videos = not extensions or any(ext.lower() in video_extensions for ext in (extensions or []))
-            
-            # Video optimization options
-            if has_videos:
-                optimize_videos_default = config.get('optimize_videos', 'no')
-                if optimize_videos_default == 'yes':
-                    optimize_videos = True
-                    print("Video optimization enabled (based on config)")
-                else:
-                    optimize_videos_input = get_input("Optimize videos as well? (y/n)", "n")
-                    optimize_videos = optimize_videos_input.lower() == 'y'
-                
-                if optimize_videos:
-                    # Get video format preference
-                    default_video_format = config.get('video_format', 'mp4')
-                    video_format_options = {
-                        '1': 'mp4',   # MP4/H.264 (compatible)
-                        '2': 'webm'   # WebM/VP9 (better compression)
-                    }
-                    
-                    # Map config format to option number
-                    default_video_choice = '1'  # Default to MP4
-                    for opt, fmt in video_format_options.items():
-                        if fmt == default_video_format:
-                            default_video_choice = opt
-                    
-                    video_format_prompt = "Video format (1=mp4 [compatible], 2=webm [better compression])"
-                    video_format_choice = get_input(video_format_prompt, default_video_choice)
-                    video_format = video_format_options.get(video_format_choice, default_video_format)
-                    
-                    # Get video preset preference
-                    default_preset = config.get('video_preset', 'medium')
-                    preset_options = {
-                        '1': 'fast',    # Fast encoding, larger files
-                        '2': 'medium',  # Balanced
-                        '3': 'slow'     # Slow encoding, smaller files
-                    }
-                    
-                    # Map config preset to option number
-                    default_preset_choice = '2'  # Default to medium
-                    for opt, preset in preset_options.items():
-                        if preset == default_preset:
-                            default_preset_choice = opt
-                    
-                    preset_prompt = "Video encoding preset (1=fast [quick], 2=medium [balanced], 3=slow [best quality])"
-                    preset_choice = get_input(preset_prompt, default_preset_choice)
-                    video_preset = preset_options.get(preset_choice, default_preset)
-                    
-                    # For pATCHES mode, ask about removing audio
-                    if optimize_size == 'patches':
-                        remove_audio_default = config.get('remove_audio', 'no')
-                        remove_audio_prompt = "Remove audio from videos? (y/n)"
-                        remove_audio_input = get_input(remove_audio_prompt, "y" if remove_audio_default == "yes" else "n")
-                        remove_audio = remove_audio_input.lower() == 'y'
-            
-            # Get number of optimization workers
-            default_workers = config.get('max_workers', 4)
-            workers_prompt = f"Parallel optimization workers (1-16, higher=faster)"
-            workers_input = get_input(workers_prompt, str(default_workers))
-            max_workers = int(workers_input) if workers_input.isdigit() and 1 <= int(workers_input) <= 16 else default_workers
-            
-            # Prepare optimization options for later use
             optimization_options = {
                 'size': optimize_size,
                 'output_format': image_format,
@@ -472,66 +374,256 @@ async def main():
                 'max_workers': max_workers,
                 'remove_audio': remove_audio
             }
-    
-    # =============== S3 UPLOAD SETTINGS COLLECTION ===============
-    
-    # Get S3 folder with tab completion - only fetch folders when needed
-    print("Enter folder name (press Tab to see existing folders)")
-    
-    # Get the folder name first, without completion
-    folder = get_input("S3 folder name", current_dir)
-    
-    # If the user pressed tab or seems to be looking for completion, then fetch folders
-    if not folder or folder == current_dir:
-        print("Fetching existing folders for tab completion...")
-        folder_tuples = await list_folders()
-        existing_folders = [folder for folder, _ in folder_tuples]
-        print(f"Found {len(existing_folders)} folders")
+        else:
+            optimization_options = None
         
-        # Now get the folder with completion
-        folder = get_input_with_completion("S3 folder name", folder, existing_folders)
+        # Set confirm to 'y' to skip confirmation prompt
+        confirm = 'y'
+    else:
+        print("S3 Upload Utility")
+        print("-----------------")
+        
+        # Get file extensions
+        extensions = get_extensions_input()
+        
+        # Check if only video extensions are specified
+        only_videos = False
+        if extensions:
+            video_extensions = ['mp4', 'mov']
+            only_videos = all(ext.lower() in video_extensions for ext in extensions)
+        
+        # Check for subfolders
+        subfolders = scan_for_subfolders('.')
+        has_subfolders = len(subfolders) > 0
+        
+        # Determine subfolder mode
+        if args.subfolder_mode:
+            # Use command line argument if provided
+            subfolder_mode = args.subfolder_mode
+            if has_subfolders:
+                print(f"Using subfolder mode '{subfolder_mode}' from command line")
+        elif has_subfolders:
+            # If subfolders are found, ask how to handle them
+            print(f"\nDetected {len(subfolders)} subfolders in the current directory:")
+            for i, subfolder in enumerate(subfolders[:5], 1):  # Show first 5 only
+                print(f"  {i}. {subfolder}")
+            if len(subfolders) > 5:
+                print(f"  ... and {len(subfolders) - 5} more")
+            
+            # Use config setting as default
+            subfolder_mode_config = config.get('subfolder_mode', 'ignore')
+            
+            subfolder_options = {
+                '1': 'ignore',   # Ignore subfolders
+                '2': 'pool',     # Combine all files
+                '3': 'preserve'  # Preserve structure
+            }
+            
+            # Map config to option number
+            default_option = '1'  # Default to ignore
+            for opt, mode in subfolder_options.items():
+                if mode == subfolder_mode_config:
+                    default_option = opt
+                    
+            mode_prompt = "How to handle subfolders? (1=ignore, 2=pool all files, 3=preserve structure)"
+            mode_choice = get_input(mode_prompt, default_option)
+            subfolder_mode = subfolder_options.get(mode_choice, subfolder_mode_config)
+            
+            print(f"Subfolder mode: {subfolder_mode}")
+        else:
+            # Use the default from config
+            subfolder_mode = config.get('subfolder_mode', 'ignore')
+        
+        # =============== OPTIMIZATION SETTINGS COLLECTION ===============
+        
+        optimize = False
+        optimize_size = None
+        image_format = None
+        video_format = None
+        video_preset = None
+        optimize_videos = False
+        max_workers = None
+        remove_audio = False
+        optimization_options = None
+        
+        if not only_videos:
+            # Use config setting for optimize
+            optimize_config = config.get('optimize', 'auto')
+            
+            if optimize_config == 'always':
+                optimize = True
+                print("Media optimization enabled (based on config)")
+            elif optimize_config == 'never':
+                optimize = False
+                print("Media optimization disabled (based on config)")
+            else:  # 'auto'
+                optimize = get_input("Optimize media before uploading? (y/n)", "n").lower() == 'y'
+            
+            if optimize:
+                # Get default size from config
+                default_size = config.get('size', 'optimized')
+                
+                # Ask which optimization size to use
+                size_options = {
+                    '1': 'optimized',  # 1920px
+                    '2': 'small',      # 1080px
+                    '3': 'tiny',       # 640px
+                    '4': 'patches'     # 1280px with higher compression
+                }
+                
+                # Determine the default choice based on the config
+                default_choice = '1'  # Default to 'optimized'
+                for choice, size in size_options.items():
+                    if size == default_size:
+                        default_choice = choice
+                
+                size_choice = get_input(f"Select size (1=optimized [1920px], 2=small [1080px], 3=tiny [640px], 4=pATCHES [1280px, high compression])", default_choice)
+                optimize_size = size_options.get(size_choice, default_size)
+                
+                # Get image format preference
+                default_image_format = config.get('image_format', 'webp')
+                image_format_options = {
+                    '1': 'webp',  # WebP (good balance)
+                    '2': 'jpg',   # JPEG (most compatible)
+                    '3': 'avif'   # AVIF (best compression)
+                }
+                
+                # Map config format to option number
+                default_format_choice = '1'  # Default to WebP
+                for opt, fmt in image_format_options.items():
+                    if fmt == default_image_format:
+                        default_format_choice = opt
+                
+                format_prompt = "Image format (1=webp [recommended], 2=jpg [compatible], 3=avif [best compression])"
+                image_format_choice = get_input(format_prompt, default_format_choice)
+                image_format = image_format_options.get(image_format_choice, default_image_format)
+                
+                # Check if there are video files in the extensions
+                video_extensions = ['mp4', 'mov', 'avi', 'mkv', 'webm']
+                has_videos = not extensions or any(ext.lower() in video_extensions for ext in (extensions or []))
+                
+                # Video optimization options
+                if has_videos:
+                    optimize_videos_default = config.get('optimize_videos', 'no')
+                    if optimize_videos_default == 'yes':
+                        optimize_videos = True
+                        print("Video optimization enabled (based on config)")
+                    else:
+                        optimize_videos_input = get_input("Optimize videos as well? (y/n)", "n")
+                        optimize_videos = optimize_videos_input.lower() == 'y'
+                    
+                    if optimize_videos:
+                        # Get video format preference
+                        default_video_format = config.get('video_format', 'mp4')
+                        video_format_options = {
+                            '1': 'mp4',   # MP4/H.264 (compatible)
+                            '2': 'webm'   # WebM/VP9 (better compression)
+                        }
+                        
+                        # Map config format to option number
+                        default_video_choice = '1'  # Default to MP4
+                        for opt, fmt in video_format_options.items():
+                            if fmt == default_video_format:
+                                default_video_choice = opt
+                        
+                        video_format_prompt = "Video format (1=mp4 [compatible], 2=webm [better compression])"
+                        video_format_choice = get_input(video_format_prompt, default_video_choice)
+                        video_format = video_format_options.get(video_format_choice, default_video_format)
+                        
+                        # Get video preset preference
+                        default_preset = config.get('video_preset', 'medium')
+                        preset_options = {
+                            '1': 'fast',    # Fast encoding, larger files
+                            '2': 'medium',  # Balanced
+                            '3': 'slow'     # Slow encoding, smaller files
+                        }
+                        
+                        # Map config preset to option number
+                        default_preset_choice = '2'  # Default to medium
+                        for opt, preset in preset_options.items():
+                            if preset == default_preset:
+                                default_preset_choice = opt
+                        
+                        preset_prompt = "Video encoding preset (1=fast [quick], 2=medium [balanced], 3=slow [best quality])"
+                        preset_choice = get_input(preset_prompt, default_preset_choice)
+                        video_preset = preset_options.get(preset_choice, default_preset)
+                        
+                        # For pATCHES mode, ask about removing audio
+                        if optimize_size == 'patches':
+                            remove_audio_default = config.get('remove_audio', 'no')
+                            remove_audio_prompt = "Remove audio from videos? (y/n)"
+                            remove_audio_input = get_input(remove_audio_prompt, "y" if remove_audio_default == "yes" else "n")
+                            remove_audio = remove_audio_input.lower() == 'y'
+                
+                # Get number of optimization workers
+                default_workers = config.get('max_workers', 4)
+                workers_prompt = f"Parallel optimization workers (1-16, higher=faster)"
+                workers_input = get_input(workers_prompt, str(default_workers))
+                max_workers = int(workers_input) if workers_input.isdigit() and 1 <= int(workers_input) <= 16 else default_workers
+                
+                # Prepare optimization options for later use
+                optimization_options = {
+                    'size': optimize_size,
+                    'output_format': image_format,
+                    'video_format': video_format,
+                    'optimize_videos': optimize_videos,
+                    'preset': video_preset,
+                    'max_workers': max_workers,
+                    'remove_audio': remove_audio
+                }
+        
+        # =============== S3 UPLOAD SETTINGS COLLECTION ===============
+        
+        # Get S3 folder with tab completion - only fetch folders when needed
+        print("Enter folder name (press Tab to see existing folders)")
+        
+        # Get the folder name first, without completion
+        folder = get_input("S3 folder name", current_dir)
+        
+        # If the user pressed tab or seems to be looking for completion, then fetch folders
+        if not folder or folder == current_dir:
+            print("Fetching existing folders for tab completion...")
+            folder_tuples = await list_folders()
+            existing_folders = [folder for folder, _ in folder_tuples]
+            print(f"Found {len(existing_folders)} folders")
+            
+            # Now get the folder with completion
+            folder = get_input_with_completion("S3 folder name", folder, existing_folders)
+        
+        # Check if folder exists in S3
+        folder_exists = await check_folder_exists(folder)
+        
+        # Initialize include_existing with default value
+        include_existing = False
+        
+        if folder_exists:
+            print(f"\nFolder '{folder}' already exists in S3 bucket.")
+            include_existing_input = get_input("Include existing files in CDN links? (y/n)", "n")
+            include_existing = include_existing_input.lower() == 'y'
+        
+        # Get rename prefix
+        rename_prefix = get_input("Rename prefix (optional, press Enter to skip)")
+        
+        # Get rename mode and output format from config
+        rename_mode = config.get('rename_mode', 'replace')
+        selected_format = config.get('format', 'array')
+        
+        # Get final confirmation
+        confirm = get_input("\nProceed with upload? (y/n)", "y")
     
-    # Check if folder exists in S3
-    folder_exists = await check_folder_exists(folder)
+    # =============== DISPLAY SETTINGS SUMMARY ===============
     
-    # Initialize include_existing with default value - changed to 'n'
-    include_existing = False
-    
-    if folder_exists:
-        print(f"\nFolder '{folder}' already exists in S3 bucket.")
-        include_existing_input = get_input("Include existing files in CDN links? (y/n)", "n")
-        include_existing = include_existing_input.lower() == 'y'
-    
-    # Get rename prefix
-    rename_prefix = get_input("Rename prefix (optional, press Enter to skip)")
-    
-    # Get rename mode from config if a prefix is specified
-    # Don't ask the user directly, use the config setting
-    rename_mode = config.get('rename_mode', 'replace')
-    
-    # Get output format from config
-    # Don't ask the user directly, use the config setting
-    selected_format = config.get('format', 'array')
-    
-    # Determine if we should only return the first URL based on the format
-    only_first = False 
-    
-    # Get concurrency from config or command line
-    concurrent = args.concurrent
-    if not concurrent:
-        # Use config value as default
-        config_concurrent = config.get('concurrent', 5)
-        concurrent_input = get_input(f"Concurrent uploads (optional, press Enter for {config_concurrent})")
-        concurrent = int(concurrent_input) if concurrent_input else config_concurrent
-    
-    # =============== CONFIRM AND EXECUTE ===============
-    
-    # Confirm settings
     print("\nUpload Settings:")
-    print(f"  Extensions: {extensions if extensions else 'All files'}")
-    if has_subfolders:
-        print(f"  Subfolder handling: {subfolder_mode}")
+    if extensions is None:
+        print(f"  Extensions: All files")
+    else:
+        print(f"  Extensions: {', '.join(extensions)}")
+    
+    if quick_mode:
+        print(f"  Mode: Quick (using defaults)")
         
+    print(f"  Subfolder handling: {subfolder_mode}")
+    
     # Display optimization settings
     if optimize:
         print(f"  Media optimization: {optimize_size}")
@@ -560,10 +652,9 @@ async def main():
     else:
         print("  No renaming")
     print(f"  Output Format: {selected_format.capitalize()} (from config)")
-    print(f"  Concurrent Uploads: {concurrent}")
+    print(f"  Concurrent Uploads: {concurrent} (from config)")
     
-    # Get final confirmation
-    confirm = get_input("\nProceed with upload? (y/n)", "y")
+    # Check if user wants to cancel (non-quick mode only)
     if confirm.lower() != 'y':
         print("Upload cancelled.")
         return
