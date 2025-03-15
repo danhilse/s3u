@@ -1,0 +1,38 @@
+name: Deploy Documentation
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "site/**"
+      - ".github/workflows/deploy-docs.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install dependencies
+        run: cd site && npm ci
+
+      - name: Build documentation
+        run: cd site && npm run docs:build
+
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: site/dist
+          branch: gh-pages

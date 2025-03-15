@@ -4,7 +4,10 @@ export default defineConfig({
   title: 's3u Documentation',
   description: 'Documentation for s3u - AWS S3 Upload Utility',
 
+  // GitHub Pages will serve this at https://danhilse.github.io/s3u/
   basePath: '/s3u/',
+  
+  // Configure Vite to use the correct base path for GitHub Pages
   vite: {
     base: '/s3u/',
   },
@@ -12,8 +15,6 @@ export default defineConfig({
   sidebar: [
     {
       text: 'Getting Started',
-      // link: '/getting-started',
-      // Explicitly make sections not collapsible
       collapsed: false,
       collapsible: false,
       items: [
@@ -24,7 +25,6 @@ export default defineConfig({
     },
     {
       text: 'Core Uploading',
-      // link: '/core-uploading',
       collapsed: false,
       collapsible: false,
       items: [
@@ -39,7 +39,6 @@ export default defineConfig({
     },
     {
       text: 'Utility Functions',
-      // link: '/utility-functions',
       collapsed: false,
       collapsible: false,
       items: [
@@ -53,7 +52,6 @@ export default defineConfig({
     },
     {
       text: 'Configuration',
-      // link: '/configuration',
       collapsed: false,
       collapsible: false,
       items: [
@@ -68,7 +66,6 @@ export default defineConfig({
     },
     {
       text: 'Reference',
-      // link: '/reference',
       collapsed: false,
       collapsible: false,
       items: [
@@ -94,17 +91,17 @@ export default defineConfig({
     }
   },
   
-  // Optional: Set up social media links
+  // Set up social media links
   socialLinks: [
     {
       icon: 'github',
-      url: 'https://github.com/yourusername/s3u',
+      url: 'https://github.com/danhilse/s3u',
     },
   ],
   
   // Add edit links to GitHub
   editLink: {
-    pattern: 'https://github.com/yourusername/s3u-docs/edit/main/docs/pages/:path',
+    pattern: 'https://github.com/danhilse/s3u/edit/main/site/docs/pages/:path',
     text: 'Edit this page on GitHub'
   },
   
@@ -112,11 +109,10 @@ export default defineConfig({
   head: {
     meta: [
       { name: 'keywords', content: 'aws, s3, upload, cloudfront, file management, image optimization' },
-      { name: 'author', content: 'Your Name' },
     ],
     // Favicon
     link: [
-      { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' }
+      { rel: 'icon', type: 'image/x-icon', href: '/s3u/favicon.ico' }
     ]
   }
 })
