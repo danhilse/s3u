@@ -150,3 +150,284 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 });
 */
+
+/* Landing page custom styles - add to your styles.css */
+
+/* Hero section */
+.landing-hero {
+  background: linear-gradient(135deg, var(--aws-blue) 0%, #0a192f 100%);
+  color: white;
+  padding: 4rem 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.landing-hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: url('/s3-pattern.svg');
+  background-size: cover;
+  opacity: 0.05;
+  z-index: 0;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.hero-logo {
+  margin-bottom: 2rem;
+}
+
+/* Terminal window styles */
+.terminal-preview {
+  background: #1a1a1a;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  margin: 3rem auto;
+  max-width: 800px;
+  overflow: hidden;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.terminal-header {
+  background: #333;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+}
+
+.terminal-button {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-right: 8px;
+  background: #ff5f56;
+}
+
+.terminal-button:nth-child(2) {
+  background: #ffbd2e;
+}
+
+.terminal-button:nth-child(3) {
+  background: #27c93f;
+}
+
+.terminal-body {
+  padding: 20px;
+  color: #f8f8f8;
+}
+
+.terminal-body p {
+  margin: 8px 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.terminal-prompt {
+  color: #63c8ff;
+}
+
+.terminal-response {
+  color: #dcdcaa;
+}
+
+.terminal-status {
+  color: #c586c0;
+}
+
+.terminal-progress {
+  color: #9cdcfe;
+}
+
+.terminal-success {
+  color: #4ec9b0;
+}
+
+.terminal-url {
+  color: #ce9178;
+  font-size: 13px;
+}
+
+/* Features section */
+.features-section {
+  padding: 5rem 0;
+  background-color: var(--aws-light-gray);
+}
+
+:root.dark .features-section {
+  background-color: #1a1a1a;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.features-heading, .code-heading {
+  text-align: center;
+  margin-bottom: 3rem;
+  color: var(--aws-orange);
+  font-size: 2.5rem;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 2rem;
+}
+
+.feature-card {
+  background: white;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+:root.dark .feature-card {
+  background: #222;
+}
+
+.feature-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+}
+
+.feature-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+}
+
+.feature-card h3 {
+  color: var(--aws-orange);
+  margin-bottom: 1rem;
+}
+
+.feature-card p {
+  color: var(--aws-dark-gray);
+  line-height: 1.6;
+}
+
+/* Code examples section */
+.code-examples-section {
+  padding: 5rem 0;
+  background-color: white;
+}
+
+:root.dark .code-examples-section {
+  background-color: #111;
+}
+
+.code-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+}
+
+.code-card {
+  background: var(--aws-light-gray);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+:root.dark .code-card {
+  background: #222;
+}
+
+.code-card h3 {
+  padding: 1rem;
+  margin: 0;
+  background: var(--aws-blue);
+  color: white;
+  font-size: 1.1rem;
+}
+
+.code-block {
+  padding: 1.5rem;
+}
+
+.code-block pre {
+  margin: 0;
+  overflow-x: auto;
+}
+
+.code-block code {
+  color: var(--aws-dark-gray);
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+}
+
+:root.dark .code-block code {
+  color: #e0e0e0;
+}
+
+/* Call-to-action section */
+.cta-section {
+  padding: 5rem 0;
+  background: linear-gradient(135deg, var(--aws-orange) 0%, #e05c12 100%);
+  color: white;
+  text-align: center;
+}
+
+.cta-section h2 {
+  margin-bottom: 2rem;
+  font-size: 2rem;
+}
+
+.cta-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .features-grid, .code-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .landing-hero {
+    padding: 3rem 0;
+  }
+  
+  .terminal-preview {
+    font-size: 12px;
+  }
+  
+  .feature-card, .code-card {
+    padding: 1.5rem;
+  }
+}
+
+/* Create an S3 pattern SVG to add to the /public directory */
+/* Save this as s3-pattern.svg in your public folder */
+/* 
+<svg width="100" height="100" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <pattern id="s3-pattern" patternUnits="userSpaceOnUse" width="100" height="100">
+      <path d="M50 15L85 35v30L50 85L15 65V35L50 15z" stroke="white" stroke-width="0.5" fill="none" opacity="0.2"/>
+      <path d="M50 0L100 25v50L50 100L0 75V25L50 0z" stroke="white" stroke-width="0.5" fill="none" opacity="0.1"/>
+      <circle cx="50" cy="50" r="3" fill="white" opacity="0.3" />
+      <circle cx="15" cy="35" r="2" fill="white" opacity="0.2" />
+      <circle cx="85" cy="35" r="2" fill="white" opacity="0.2" />
+      <circle cx="15" cy="65" r="2" fill="white" opacity="0.2" />
+      <circle cx="85" cy="65" r="2" fill="white" opacity="0.2" />
+    </pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#s3-pattern)" />
+</svg>
+*/
+
