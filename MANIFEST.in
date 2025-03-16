@@ -1,0 +1,8 @@
+# Include license file
+include LICENSE
+include README.md
+
+# Exclude directories
+prune site
+prune docs
+prune .github

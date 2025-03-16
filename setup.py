@@ -12,15 +12,14 @@ except (subprocess.SubprocessError, FileNotFoundError):
 
 setup(
     name="s3u",
-    version="0.2.0",
+    version="0.1.0",
     packages=find_packages(),
     install_requires=[
         "aioboto3",
         "pyperclip",
         "questionary",  # For interactive menus
-        "tqdm",         # Likely needed for progress tracking
+        "tqdm",         # Needed for progress tracking
         "boto3",        # Base dependency for S3 operations
-        "pillow",       # Likely needed for image handling
     ],
     extras_require={
         "dev": [
@@ -35,14 +34,14 @@ setup(
             's3u=s3u.cli:run_cli',
         ],
     },
-    python_requires=">=3.7",  # Specified in README
-    author="Your Name",
-    author_email="your.email@example.com",
+    python_requires=">=3.7",
+    author="Daniel Hilse",
+    author_email="danhilse@gmail.com",
     description="S3 Upload Utility - Optimize images and upload files to S3",
     long_description=open("README.md").read(),
     long_description_content_type="text/markdown",
     keywords="s3, upload, aws, utility, images, optimization, cloudfront",
-    url="https://github.com/yourusername/s3u",
+    url="https://github.com/danhilse/s3u",
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Developers",
