@@ -2,314 +2,415 @@
 layout: docs
 ---
 
-# Reference
+# Utility Functions
 
-This section provides a comprehensive reference for S3U, including all command line options, troubleshooting tips, and frequently asked questions.
+Beyond its core uploading capabilities, S3U provides several utility functions for file management, folder operations, and content retrieval. This guide covers the non-uploading functionality in the S3U tool.
 
-## Command Line Options
+## Listing Folders
 
-S3U offers a wide range of command line options to control its behavior. Below is a complete reference of all available flags and options.
+S3U provides functionality to list and manage folders in your S3 bucket.
 
-### General Options
+### Viewing All Folders
 
-| Option | Description |
-|--------|-------------|
-| `--help`, `-h` | Display help information |
-| `--version`, `-v` | Display version information |
-| `--setup` | Run the initial setup process |
-| `--status` | Display current configuration status |
+Use the `-ls` flag to see all folders in your bucket with item counts:
 
-### Upload Options
+```bash
+s3u -ls
+```
 
-| Option | Description |
-|--------|-------------|
-| `-q`, `--quick` | Quick mode: upload with default settings |
-| `-c NUM`, `--concurrent NUM` | Set number of concurrent uploads (1-20) |
-| `-sf MODE`, `--subfolder MODE` | Set subfolder handling mode (ignore, pool, preserve) |
-| `-f`, `--first-only` | Copy only the first URL to clipboard |
-| `--force` | Skip confirmation prompts |
-| `--no-optimize` | Skip media optimization |
+Example output:
+```
+Folders in S3 bucket:
+--------------------------------------------------
+Folder Name                              Items     
+--------------------------------------------------
+landscapes                               42        
+portraits                                18        
+watercolors                              37        
+--------------------------------------------------
+Total: 3 folders
+```
 
-### Utility Functions
+This helps you:
+- Get an overview of your bucket's organization
+- See which folders contain the most items
+- Find folders you might have forgotten about
 
-| Option | Description |
-|--------|-------------|
-| `-ls`, `--list` | List all folders in the bucket |
-| `-b FOLDER`, `--browse FOLDER` | Browse files in specified folder |
-| `-d FOLDER`, `--download FOLDER` | Download files from specified folder |
-| `-o DIR`, `--output DIR` | Specify output directory for downloads |
-| `-r PREFIX`, `--rename PREFIX` | Set rename prefix for this session |
+### Folder Existence Checking
 
-### Configuration
+Before uploading, S3U automatically checks if the destination folder already exists. If it exists, you'll be prompted:
 
-| Option | Description |
-|--------|-------------|
-| `--config` | Display current configuration |
-| `--config OPTION` | View specific configuration option |
-| `--config OPTION VALUE` | Set configuration option |
-| `--config reset` | Reset configuration to defaults |
+```
+Folder 'vacation_photos' already exists in S3 bucket.
+Include existing files in CDN links? (y/n) [y]: 
+```
 
-### Examples
+- Answering `y` includes both new and existing files in the output URLs
+- Answering `n` includes only newly uploaded files
 
-Here are some examples of how to use these command line options:
+:::tip
+This helps prevent accidentally creating duplicate folders with slight name variations.
+:::
+
+## Browsing Content
+
+S3U includes functions to browse existing content and generate CloudFront URLs without uploading new files.
+
+### Browsing Folders
+
+To get CloudFront URLs for files in an existing folder:
+
+```bash
+s3u -b folder_name
+```
+
+This lists all objects in the folder and copies their URLs to your clipboard in the configured format.
+
+### Limiting Results
+
+You can limit the number of URLs returned:
+
+```bash
+s3u -b folder_name 12
+```
+
+This returns only the first 12 items (sorted alphabetically).
+
+### Recursive Browsing
+
+When using the preserve subfolder mode, browsing will recursively list all files including those in subfolders:
+
+```bash
+s3u -b folder_name -sf preserve
+```
+
+### URL Formats
+
+The URLs are formatted according to your `format` configuration:
 
 :::code-group
-```bash [Quick Upload]
-# Upload all files in current directory with default settings
-s3u -q
+```json [Array Format (Default)]
+["https://d1lbnboj0lfh6w.cloudfront.net/folder/file1.jpg", "https://d1lbnboj0lfh6w.cloudfront.net/folder/file2.jpg"]
 ```
 
-```bash [Custom Upload]
-# Upload with 10 concurrent uploads and preserve subfolder structure
-s3u -c 10 -sf preserve
+```json [JSON Format]
+{
+  "folder": "vacation_photos",
+  "count": 2,
+  "timestamp": "2023-08-15T14:22:33.456789",
+  "files": [
+    {
+      "url": "https://d1lbnboj0lfh6w.cloudfront.net/folder/file1.jpg",
+      "filename": "file1.jpg",
+      "s3_path": "folder/file1.jpg",
+      "size": 245678,
+      "last_modified": "2023-08-15T14:20:12.345678",
+      "type": "jpg"
+    },
+    {
+      "url": "https://d1lbnboj0lfh6w.cloudfront.net/folder/file2.jpg",
+      "filename": "file2.jpg",
+      "s3_path": "folder/file2.jpg",
+      "size": 312456,
+      "last_modified": "2023-08-15T14:21:45.678901",
+      "type": "jpg"
+    }
+  ]
+}
 ```
 
-```bash [Utility Functions]
-# List all folders in the bucket
-s3u -ls
-
-# Browse files in a folder
-s3u -b vacation_photos
-
-# Download a folder
-s3u -d vacation_photos -o ./downloads
-```
-
-```bash [Configuration]
-# View all configuration options
-s3u --config
-
-# Set output format to JSON
-s3u --config format json
-
-# Reset all configuration to defaults
-s3u --config reset
+```html [HTML Format]
+<html>
+<head><title>S3U Generated Links</title></head>
+<body>
+<h1>Files in folder: vacation_photos</h1>
+<ul>
+<li><a href="https://d1lbnboj0lfh6w.cloudfront.net/folder/file1.jpg">file1.jpg</a></li>
+<li><a href="https://d1lbnboj0lfh6w.cloudfront.net/folder/file2.jpg">file2.jpg</a></li>
+</ul>
+</body>
+</html>
 ```
 :::
 
-## Troubleshooting
+:::info
+To get only the first URL (useful for single file browsing):
 
-Here are solutions to common issues you might encounter when using S3U.
-
-### Authentication Issues
-
-#### "Access Denied" Error
-
-**Symptom**:
-```
-Error uploading file.jpg: AccessDenied - Access Denied (Service: Amazon S3)
-```
-
-**Possible Causes**:
-1. Invalid or expired AWS credentials
-2. Insufficient IAM permissions
-3. Bucket policy restrictions
-
-**Solutions**:
-1. Verify your AWS credentials:
-   ```bash
-   aws sts get-caller-identity
-   ```
-   
-2. Check your IAM permissions. You need at least these permissions:
-   ```json
-   {
-     "Effect": "Allow",
-     "Action": [
-       "s3:PutObject",
-       "s3:GetObject",
-       "s3:ListBucket"
-     ],
-     "Resource": [
-       "arn:aws:s3:::your-bucket-name",
-       "arn:aws:s3:::your-bucket-name/*"
-     ]
-   }
-   ```
-
-3. Try a different AWS profile:
-   ```bash
-   s3u -config aws_profile other-profile
-   ```
-
-### Upload Problems
-
-#### Slow Uploads
-
-**Symptom**: Uploads take significantly longer than expected.
-
-**Possible Causes**:
-1. Network limitations
-2. Excessive concurrency causing throttling
-3. Very large files
-
-**Solutions**:
-1. Adjust concurrency based on your network:
-   ```bash
-   s3u -c 5  # Lower value for stability
-   ```
-   
-2. For large files, try optimizing before upload:
-   ```bash
-   s3u
-   # Select 'yes' for optimization
-   ```
-   
-3. Check your network connection quality and bandwidth
-
-#### Timeouts During Upload
-
-**Symptom**:
-```
-Error uploading large_video.mp4: Connection timed out
-```
-
-**Possible Causes**:
-1. Network instability
-2. File size too large for single operation
-3. AWS throttling
-
-**Solutions**:
-1. Reduce concurrency:
-   ```bash
-   s3u -c 3
-   ```
-   
-2. For large files, consider splitting them into smaller parts
-3. Try at a different time or from a different network
-
-### Media Optimization Issues
-
-#### Optimization Fails
-
-**Symptom**:
-```
-Error optimizing image.jpg: Could not process file
-```
-
-**Possible Causes**:
-1. Missing dependencies
-2. Corrupted source file
-3. Insufficient system resources
-
-**Solutions**:
-1. Ensure required dependencies are installed:
-   ```bash
-   pip install pillow ffmpeg-python
-   ```
-   
-2. Verify the source file can be opened with other applications
-3. Reduce the number of worker processes:
-   ```bash
-   s3u -config max_workers 2
-   ```
-
-### CloudFront Issues
-
-#### URLs Not Working
-
-**Symptom**: Generated CloudFront URLs return 403 or don't load.
-
-**Possible Causes**:
-1. CloudFront distribution not properly configured
-2. Origin access settings incorrect
-3. CloudFront cache hasn't updated
-
-**Solutions**:
-1. Verify your CloudFront distribution settings in AWS Console
-2. Ensure the Origin settings point to the correct S3 bucket
-3. Wait for CloudFront propagation (can take 15-30 minutes)
-4. Check that your CloudFront URL in S3U config is correct:
-   ```bash
-   s3u -config cloudfront_url https://your-distribution-id.cloudfront.net
-   ```
-
-## FAQ
-
-### General Questions
-
-#### What is S3U?
-
-S3U is a command-line utility for uploading files to Amazon S3 and generating CloudFront URLs. It provides a streamlined workflow for managing media assets in AWS, with features for optimization, organization, and retrieval.
-
-#### Is S3U open source?
-
-Yes, S3U is open-source software available under the MIT license. You can view, modify, and distribute the code according to the terms of the license.
-
-#### What operating systems does S3U support?
-
-S3U supports Windows, macOS, and Linux. It requires Python 3.8 or higher.
-
-### AWS-Related Questions
-
-#### Do I need an AWS account to use S3U?
-
-Yes, S3U requires an AWS account with an S3 bucket. For full functionality, a CloudFront distribution connected to your S3 bucket is recommended.
-
-#### What AWS permissions do I need?
-
-At minimum, you need these S3 permissions:
-- `s3:PutObject`
-- `s3:GetObject`
-- `s3:ListBucket`
-
-For all features, include these additional permissions:
-- `s3:DeleteObject` (for file management)
-- `cloudfront:CreateInvalidation` (for cache invalidation)
-
-#### Can I use S3U with AWS S3-compatible storage?
-
-S3U is designed primarily for AWS S3, but may work with S3-compatible storage providers that implement the same API. However, CloudFront-specific features will only work with AWS.
-
-### Feature Questions
-
-#### Can S3U handle very large files?
-
-Yes, S3U can handle large files, but there are practical limits:
-- Files up to 5GB can be uploaded directly
-- For optimal performance with large files, reduce concurrency (`-c 3`)
-- Video optimization works best for files under 2GB due to memory constraints
-
-#### Does S3U support folder synchronization?
-
-S3U does not currently support full two-way synchronization. It provides these related features:
-- Upload files to S3 folders
-- Download entire S3 folders
-- Browse existing S3 folders
-
-#### Can I schedule automatic uploads?
-
-S3U itself doesn't include scheduling, but you can use system schedulers like cron (Linux/macOS) or Task Scheduler (Windows) to run S3U commands at specified times.
-
-Example cron job to upload files daily at 2 AM:
-```
-0 2 * * * cd /path/to/files && /usr/local/bin/s3u -q
-```
-
-### Troubleshooting Questions
-
-#### How do I update S3U to the latest version?
-
-Update S3U using pip:
 ```bash
-pip install -U s3u
+s3u -b folder_name -f
 ```
+:::
 
-#### Will S3U overwrite existing files?
+## Downloading Files
 
-Yes, if you upload a file with the same name to the same S3 path, it will overwrite the existing file. You can use the rename prefix feature to avoid overwrites.
+S3U allows you to download entire folders from your S3 bucket.
 
-#### How can I reset my S3U configuration?
+### Basic Downloads
 
-Reset your configuration with:
+To download a folder:
+
 ```bash
-s3u -config reset
+s3u -d folder_name
 ```
 
-Or manually delete the configuration file at:
-- Linux/macOS: `~/.s3u/config.json`
-- Windows: `%APPDATA%\s3u\config.json`
+This creates a local directory with the same name and downloads all files from the S3 folder.
+
+### Advanced Download Options
+
+You can customize downloads with additional options:
+
+::::steps
+### Limit the Number of Files
+Download only the first 5 files from a folder:
+```bash
+s3u -d folder_name 5
+```
+
+### Specify Output Directory
+Download to a specific directory:
+```bash
+s3u -d folder_name -o ./downloaded_files
+```
+
+### Include Subfolders
+Download files recursively including subfolders:
+```bash
+s3u -d folder_name -sf preserve
+```
+::::
+
+### Download Features
+
+The download functionality includes:
+
+1. **Concurrent downloads**: Multiple files are downloaded simultaneously for speed
+2. **Progress tracking**: Real-time progress is displayed with ETA
+3. **Directory creation**: Destination directories are created if they don't exist
+4. **Structure preservation**: Subfolder structures can be maintained
+5. **Error handling**: Failed downloads are reported but don't stop the process
+
+Example download session:
+```
+Downloading folder 'vacation_photos'...
+Creating local directory ./vacation_photos
+
+Downloading beach_001.jpg: 100.0% | 4.21 MB/s | ETA: 0s
+Downloading sunset_002.jpg: 100.0% | 3.87 MB/s | ETA: 0s
+[...]
+
+Downloaded 15 of 15 files successfully
+```
 
 :::tip
-If you encounter issues not covered here, check the [GitHub repository](https://github.com/yourusername/s3u) for the latest troubleshooting information or to report bugs.
+For large folders, downloads use the same concurrent processing system as uploads. You can adjust concurrency with:
+```bash
+s3u -config concurrent 10
+```
+:::
+
+## File Renaming
+
+S3U can rename files before uploading using customizable patterns. This is useful for organizing files and creating consistent naming schemes.
+
+### Renaming Modes
+
+There are three renaming modes available:
+
+| Mode | Description | Example with prefix "vacation" |
+|------|-------------|--------------------------------|
+| `replace` (default) | Replace original filenames with pattern `prefix_index` | beach.jpg → vacation_001.jpg |
+| `prepend` | Add prefix before original filename with pattern `prefix_originalname` | beach.jpg → vacation_beach.jpg |
+| `append` | Add prefix after original filename with pattern `originalname_prefix` | beach.jpg → beach_vacation.jpg |
+
+### Setting Your Rename Mode
+
+You can set your preferred rename mode in the configuration:
+
+```bash
+s3u -config rename_mode prepend
+```
+
+### Automatic Sequential Numbering
+
+When using `replace` mode, files are automatically numbered with leading zeros based on the total number of files:
+
+- 1-9 files: Single digit (e.g., `vacation_1.jpg`)
+- 10-99 files: Two digits (e.g., `vacation_01.jpg`)
+- 100-999 files: Three digits (e.g., `vacation_001.jpg`)
+- 1000+ files: Four digits (e.g., `vacation_0001.jpg`)
+
+This ensures proper alphabetical sorting in file listings.
+
+### Using with Upload Process
+
+During the interactive upload process, you'll be prompted for a rename prefix:
+
+```
+Enter folder name (press Tab to see existing folders)
+S3 folder name [current_directory]: vacation_photos
+
+Rename prefix (optional, press Enter to skip): beach_trip
+```
+
+- Entering a prefix will rename files according to your configured rename mode
+- Pressing Enter without a prefix will keep original filenames
+
+:::warning
+When using rename mode with the `pool` subfolder handling option, be aware that files with the same name from different subfolders may conflict.
+:::
+
+## File Selection and Filtering
+
+S3U lets you filter which files to include in operations based on their extensions.
+
+### How File Selection Works
+
+Files are filtered using these rules:
+
+1. If no extensions are specified, all files are included except:
+   - Hidden files (starting with `.`)
+   - System files like `.DS_Store`
+
+2. When extensions are specified, only files matching those extensions are processed
+   - Example: `jpg png gif` will only include image files with those extensions
+
+### Extension Examples
+
+```bash
+# Process only image files
+s3u
+Extensions: jpg png gif
+
+# Process only video files
+s3u
+Extensions: mp4 mov
+
+# Process documents
+s3u
+Extensions: pdf doc docx txt
+
+# Process all files (default)
+s3u
+Extensions: all
+```
+
+### Extension Groups
+
+S3U supports predefined extension groups for convenience:
+
+| Group | Extensions |
+|-------|------------|
+| `images` | jpg, jpeg, png, gif, webp, svg |
+| `videos` | mp4, mov, avi, webm, mkv |
+| `documents` | pdf, doc, docx, txt, md |
+
+Example:
+```bash
+s3u
+Extensions: images
+```
+
+This will select all image files for processing.
+
+## Advanced Features
+
+### MIME Type Handling
+
+S3U automatically determines the correct MIME type for files to ensure proper handling:
+
+| Extension | MIME Type |
+|-----------|-----------|
+| .jpg, .jpeg | image/jpeg |
+| .png | image/png |
+| .gif | image/gif |
+| .webp | image/webp |
+| .avif | image/avif |
+| .mp4 | video/mp4 |
+| .mov | video/quicktime |
+| .webm | video/webm |
+| .pdf | application/pdf |
+
+:::info
+Correct MIME types ensure:
+- Browsers handle files appropriately (e.g., playing videos instead of downloading them)
+- CloudFront serves files with the correct `Content-Type` header
+- Files can be properly indexed and categorized
+:::
+
+### Command Line Reference
+
+Here's a quick reference for utility function command-line flags:
+
+| Flag | Description |
+|------|-------------|
+| `-ls` | List all folders in the bucket with item counts |
+| `-b FOLDER` | Browse an existing folder and get URLs |
+| `-d FOLDER` | Download files from a folder |
+| `-o DIR` | Specify output directory for downloads |
+| `-sf MODE` | Set subfolder handling mode (ignore, pool, preserve) |
+| `-f` | Copy only the first URL to clipboard |
+
+## Use Cases and Examples
+
+Here are some practical examples of using S3U's utility functions:
+
+::::steps
+### Content Inventory
+Take inventory of your S3 bucket to see what's stored where:
+
+```bash
+# List all folders
+s3u -ls
+
+# Browse specific folders to check contents
+s3u -b interesting_folder
+```
+
+### Content Migration
+Move files from one location to another:
+
+```bash
+# Download content from source folder
+s3u -d source_folder -o ./migration
+
+# Upload to new destination
+cd ./migration
+s3u
+# Enter destination_folder when prompted
+```
+
+### Folder Organization
+Consolidate files from multiple subfolders:
+
+```bash
+# Create a directory structure
+mkdir -p project/{images,videos,documents}
+
+# Add files to each subfolder
+# ...
+
+# Upload preserving structure
+s3u -sf preserve
+# Enter "project" as the S3 folder name
+
+# Or pool all files together
+s3u -sf pool
+# Enter "project_all" as the S3 folder name
+```
+
+### Quick Access to Content
+Get links to share with others:
+
+```bash
+# Get all links in HTML format
+s3u -config format html
+s3u -b portfolio_images
+
+# Get just the first link
+s3u -b latest_release -f
+```
+::::
+
+:::tip
+Looking for configuration details? Check out the [Configuration](../configuration/) section for more advanced options.
 :::
